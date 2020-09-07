@@ -148,9 +148,9 @@ class TaskRunner(object):
         num_labels = len(unique_labels)
         self.label2idx = label2idx
         self.idx2label = idx2label
-
         self.config = config.from_pretrained(self.args.pretrained_model, num_labels=num_labels)
-        config.tags = spec_token_new_ids
+        self.config.tags = spec_token_new_ids
+        self.config.scheme = self.args.classification_scheme
         # init model
         self.model = model.from_pretrained(self.args.pretrained_model, config=self.config)
         total_token_num = len(self.tokenizer)

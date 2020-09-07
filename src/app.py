@@ -54,6 +54,9 @@ if __name__ == '__main__':
                         help="valid values: bert, roberta or xlnet")
     parser.add_argument("--data_format_mode", default=0, type=int,
                         help="valid values: 0: sep mode - [CLS]S1[SEP]S2[SEP]; 1: uni mode - [CLS]S1S2[SEP]")
+    parser.add_argument("--classification_scheme", default=0, type=int,
+                        help="special tokens used for classification. "
+                             "Valid values: 0: [CLS]; 1: [CLS], [S1], [S2]; 2: [CLS], [S1], [S2], [E1], [E2]")
     parser.add_argument("--pretrained_model", type=str,
                         help="The pretrained model file or directory for fine tuning.")
     parser.add_argument("--data_dir", type=str, required=True,
