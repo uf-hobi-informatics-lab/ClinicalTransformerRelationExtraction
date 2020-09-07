@@ -1,0 +1,7 @@
+EN1_START = "[S1]"
+EN1_END = "[E1]"
+EN2_START = "[S2]"
+EN2_END = "[E2]"
+SPEC_TAGS = [EN1_START, EN1_END, EN2_START, EN2_END]
+
+MODEL_REQUIRE_SEGMENT_ID = {'bert', 'xlnet', 'albert'}
