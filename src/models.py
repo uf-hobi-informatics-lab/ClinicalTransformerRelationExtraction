@@ -5,44 +5,51 @@ from transformers.modeling_utils import SequenceSummary
 from transformers import (BertForSequenceClassification, BertModel,
                           XLNetForSequenceClassification, XLNetModel,
                           RobertaForSequenceClassification, RobertaModel,
-                          AlbertForSequenceClassification, AlbertModel)
+                          AlbertForSequenceClassification, AlbertModel,
+                          PreTrainedModel)
 
 
-class BaseModel(nn.Module):
+class BaseModel(PreTrainedModel):
     def __init__(self, config):
-        super().__init__()
-        if config.tags:
+        super().__init__(config)
+        if "tags" in config.__dict__:
             self.spec_tag1, self.spec_tag2, self.spec_tag3, self.spec_tag4 = config.tags
         else:
             self.spec_tag1, self.spec_tag2, self.spec_tag3, self.spec_tag4 = None, None, None, None
+        if "scheme" in config.__dict__:
+            self.scheme = config.scheme
+        else:
+            self.scheme = 0
+        if "num_labels" in config.__dict__:
+            self.num_labels = config.num_labels
+        else:
+            self.num_labels = 2
 
         self.loss_fct = CrossEntropyLoss()
-        self.scheme = config.scheme
-        self.num_labels = config.num_labels
         self.classifier1 = nn.Linear(config.hidden_size, config.num_labels)
         self.classifier2 = nn.Linear(config.hidden_size * 3, config.num_labels)
         self.classifier3 = nn.Linear(config.hidden_size * 5, config.num_labels)
 
     @staticmethod
     def special_tag_representation(seq_output, input_ids, special_tag):
-        spec_idx = (input_ids == special_tag).nonzero()
+        spec_idx = (input_ids == special_tag).nonzero(as_tuple=False)
         temp = []
         for idx in spec_idx:
             temp.append(seq_output[idx[0], idx[1], :])
-        return torch.stack(temp)
+        return torch.stack(temp, dim=0)
 
     def output2logits(self, pooled_output, seq_output, input_ids):
         if self.scheme == 1:
             seq_tags = []
             for each_tag in [self.spec_tag1, self.spec_tag2]:
                 seq_tags.append(self.special_tag_representation(seq_output, input_ids, each_tag))
-            new_pooled_output = torch.cat((pooled_output, *seq_tags), 1)
+            new_pooled_output = torch.cat((pooled_output, *seq_tags), dim=1)
             logits = self.classifier2(new_pooled_output)
         elif self.scheme == 2:
             seq_tags = []
             for each_tag in [self.spec_tag1, self.spec_tag2, self.spec_tag3, self.spec_tag4]:
                 seq_tags.append(self.special_tag_representation(seq_output, input_ids, each_tag))
-            new_pooled_output = torch.cat((pooled_output, *seq_tags), 1)
+            new_pooled_output = torch.cat((pooled_output, *seq_tags), dim=1)
             logits = self.classifier3(new_pooled_output)
         else:
             logits = self.classifier1(pooled_output)

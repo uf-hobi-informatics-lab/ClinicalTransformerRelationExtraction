@@ -54,24 +54,32 @@ class TaskRunner(object):
         self.args = args
         # set up data processor
         if self.args.data_format_mode == 0:
-            self. data_processor = RelationDataFormatSepProcessor()
+            self.data_processor = RelationDataFormatSepProcessor()
         elif self.args.data_format_mode == 1:
             self.data_processor = RelationDataFormatUniProcessor()
         else:
             raise NotImplementedError("Only support 0, 1 but get data_format_mode as {}"
                                       .format(self.args.data_format_mode))
-        # load data
         self.data_processor.set_data_dir(self.args.data_dir)
-        self._load_data()
-        # init amp for fp16 (mix precision training)
-        # _use_amp_for_fp16_from: 0 for no fp16; 1 for naive PyTorch amp; 2 for apex amp
-        self._use_amp_for_fp16_from = 0
-        self._load_amp_for_fp16()
         # init or reload model
         if self.args.do_train:
+            # init amp for fp16 (mix precision training)
+            # _use_amp_for_fp16_from: 0 for no fp16; 1 for naive PyTorch amp; 2 for apex amp
+            if self.args.fp16:
+                self._use_amp_for_fp16_from = 0
+                self._load_amp_for_fp16()
             self._init_new_model()
         else:
             self._init_trained_model()
+        # load data
+        self.train_data_loader = None
+        self.dev_data_loader = None
+        self.test_data_loader = None
+        self._load_data()
+        if self.args.do_train:
+            self._init_optimizer()
+        self.args.logger.info("Model Config:\n{}".format(self.config))
+        self.args.logger.info("All parameters:\n{}".format(self.args))
 
     def train(self):
         # create data loader
@@ -142,7 +150,7 @@ class TaskRunner(object):
         self.tokenizer = tokenizer.from_pretrained(self.args.pretrained_model, do_lower_case=self.args.do_lower_case)
         last_token_idx = len(self.tokenizer)
         self.tokenizer.add_tokens(SPEC_TAGS)
-        spec_token_new_ids = tuple([(last_token_idx + idx) for idx in range(len(tokenizer) - last_token_idx)])
+        spec_token_new_ids = tuple([(last_token_idx + idx) for idx in range(len(self.tokenizer) - last_token_idx)])
         # init config
         unique_labels, label2idx, idx2label = self.data_processor.get_labels()
         num_labels = len(unique_labels)
@@ -154,16 +162,18 @@ class TaskRunner(object):
         # init model
         self.model = model.from_pretrained(self.args.pretrained_model, config=self.config)
         total_token_num = len(self.tokenizer)
-        self.model.model.resize_token_embeddings(total_token_num)
+        self.model.resize_token_embeddings(total_token_num)
         self.config.vocab_size = total_token_num
         # load model to device
         self.model.to(self.args.device)
+
+    def _init_optimizer(self):
         # set up optimizer
         no_decay = ["bias", "LayerNorm.weight"]
         optimizer_grouped_parameters = [
-            {'params': [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)],
+            {'params': [p for n, p in self.model.named_parameters() if not any(nd in n for nd in no_decay)],
              'weight_decay': self.args.weight_decay},
-            {'params': [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)],
+            {'params': [p for n, p in self.model.named_parameters() if any(nd in n for nd in no_decay)],
              'weight_decay': 0.0}
         ]
         self.optimizer = torch.optim.AdamW(optimizer_grouped_parameters,
@@ -243,16 +253,31 @@ class TaskRunner(object):
         if self.args.do_train:
             train_examples = self.data_processor.get_train_examples()
             train_features = convert_examples_to_relation_extraction_features(
-                train_examples, tokenizer=self.tokenizer, max_length=self.args.max_seq_length, label_list=self.label2idx)
-            self.train_data_loader = relation_extraction_data_loader(features2tensors(train_features))
+                train_examples,
+                tokenizer=self.tokenizer,
+                max_length=self.args.max_seq_length,
+                label_list=self.label2idx,
+                output_mode="classification")
+            self.train_data_loader = relation_extraction_data_loader(
+                train_features, batch_size=self.args.train_batch_size, task="train", logger=self.args.logger)
         if self.args.do_eval:
             dev_examples = self.data_processor.get_dev_examples()
             dev_features = convert_examples_to_relation_extraction_features(
-                dev_examples, tokenizer=self.tokenizer, max_length=self.args.max_seq_length, label_list=self.label2idx)
+                dev_examples,
+                tokenizer=self.tokenizer,
+                max_length=self.args.max_seq_length,
+                label_list=self.label2idx,
+                output_mode="classification")
             self.dev_features = dev_features
-            self.dev_data_loader = relation_extraction_data_loader(features2tensors(dev_features))
-        if self.args.do_pred:
+            self.dev_data_loader = relation_extraction_data_loader(
+                dev_features, batch_size=self.args.train_batch_size, task="test", logger=self.args.logger)
+        if self.args.do_predict:
             test_examples = self.data_processor.get_test_examples()
             test_features = convert_examples_to_relation_extraction_features(
-                test_examples, tokenizer=self.tokenizer, max_length=self.args.max_seq_length, label_list=self.label2idx)
-            self.test_data_loader = relation_extraction_data_loader(features2tensors(test_features))
+                test_examples,
+                tokenizer=self.tokenizer,
+                max_length=self.args.max_seq_length,
+                label_list=self.label2idx,
+                output_mode="classification")
+            self.test_data_loader = relation_extraction_data_loader(
+                test_features, batch_size=self.args.eval_batch_size, task="test", logger=self.args.logger)

@@ -102,12 +102,14 @@ def convert_examples_to_relation_extraction_features(
     return features
 
 
-def features2tensors(features):
+def features2tensors(features, logger=None):
     tensor_input_ids = []
     tensor_attention_masks = []
     tensor_token_type_ids = []
     tensor_label_ids = []
-    for feature in features:
+    for idx, feature in enumerate(features):
+        if logger and idx < 3:
+            logger.info("Feature{}:\n{}\n".format(idx+1, feature))
         tensor_input_ids.append(feature.input_ids)
         tensor_attention_masks.append(feature.attention_mask)
         tensor_label_ids.append(feature.label)
@@ -122,7 +124,7 @@ def features2tensors(features):
     return TensorDataset(tensor_input_ids, tensor_attention_masks, tensor_token_type_ids, tensor_label_ids)
 
 
-def relation_extraction_data_loader(dataset, batch_size=2, task='train'):
+def relation_extraction_data_loader(dataset, batch_size=2, task='train', logger=None):
     """
     task has two levels:
     train for training using RandomSampler
@@ -131,7 +133,7 @@ def relation_extraction_data_loader(dataset, batch_size=2, task='train'):
     if set auto to True we will default call convert_features_to_tensors,
     so features can be directly passed into the function
     """
-    dataset = features2tensors(dataset)
+    dataset = features2tensors(dataset, logger=logger)
 
     if task == 'train':
         sampler = RandomSampler(dataset)
@@ -154,7 +156,10 @@ def batch_to_model_input(batch, model_type="bert", device=torch.device("cpu")):
 class DataProcessor(object):
     """Base class for data converters for sequence classification data sets."""
     def __init__(self, data_dir=None):
-        self.data_dir = Path(data_dir)
+        if data_dir:
+            self.data_dir = Path(data_dir)
+        else:
+            self.data_dir = data_dir
 
     def set_data_dir(self, data_dir):
         self.data_dir = Path(data_dir)
@@ -182,7 +187,10 @@ class DataProcessor(object):
             Gets the list of labels for this data set.
             In all different formats, the first column always should be label
         """
-        egs = self.get_train_examples() + self.get_dev_examples()
+        try:
+            egs = self.get_train_examples() + self.get_dev_examples()
+        except FileNotFoundError:
+            egs = self.get_train_examples()
         unique_labels = set([eg.label for eg in egs])
         label2idx = {k: v for v, k in enumerate(unique_labels)}
         idx2label = {v: k for k, v in label2idx.items()}
