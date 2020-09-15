@@ -252,7 +252,17 @@ class TaskRunner(object):
 
     def _load_data(self):
         if self.args.do_train:
-            train_examples = self.data_processor.get_train_examples()
+            cached_examples_file = Path(self.args.data_dir) / "cached_{}_{}_{}_train.pkl".format(
+                self.args.model_type, self.args.data_format_mode, self.args.max_seq_length)
+            # load examples from files or cache
+            if self.args.cache_data and cached_examples_file.exists():
+                train_examples = pkl_load(cached_examples_file)
+            elif self.args.cache_data and not cached_examples_file.exists():
+                train_examples = self.data_processor.get_train_examples()
+                pkl_save(train_examples, cached_examples_file)
+            else:
+                train_examples = self.data_processor.get_train_examples()
+            # convert examples to tensor
             train_features = convert_examples_to_relation_extraction_features(
                 train_examples,
                 tokenizer=self.tokenizer,
@@ -262,7 +272,17 @@ class TaskRunner(object):
             self.train_data_loader = relation_extraction_data_loader(
                 train_features, batch_size=self.args.train_batch_size, task="train", logger=self.args.logger)
         if self.args.do_eval:
-            dev_examples = self.data_processor.get_dev_examples()
+            cached_examples_file = Path(self.args.data_dir) / "cached_{}_{}_{}_dev.pkl".format(
+                self.args.model_type, self.args.data_format_mode, self.args.max_seq_length)
+            # load examples from files or cache
+            if self.args.cache_data and cached_examples_file.exists():
+                dev_examples = pkl_load(cached_examples_file)
+            elif self.args.cache_data and not cached_examples_file.exists():
+                dev_examples = self.data_processor.get_dev_examples()
+                pkl_save(dev_examples, cached_examples_file)
+            else:
+                dev_examples = self.data_processor.get_dev_examples()
+            # example2feature
             dev_features = convert_examples_to_relation_extraction_features(
                 dev_examples,
                 tokenizer=self.tokenizer,
@@ -273,7 +293,17 @@ class TaskRunner(object):
             self.dev_data_loader = relation_extraction_data_loader(
                 dev_features, batch_size=self.args.train_batch_size, task="test", logger=self.args.logger)
         if self.args.do_predict:
-            test_examples = self.data_processor.get_test_examples()
+            cached_examples_file = Path(self.args.data_dir) / "cached_{}_{}_{}_test.pkl".format(
+                self.args.model_type, self.args.data_format_mode, self.args.max_seq_length)
+            # load examples from files or cache
+            if self.args.cache_data and cached_examples_file.exists():
+                test_examples = pkl_load(cached_examples_file)
+            elif self.args.cache_data and not cached_examples_file.exists():
+                test_examples = self.data_processor.get_test_examples()
+                pkl_save(test_examples, cached_examples_file)
+            else:
+                test_examples = self.data_processor.get_test_examples()
+            # example2feature
             test_features = convert_examples_to_relation_extraction_features(
                 test_examples,
                 tokenizer=self.tokenizer,

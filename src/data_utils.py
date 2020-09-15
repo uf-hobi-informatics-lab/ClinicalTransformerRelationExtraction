@@ -1,6 +1,6 @@
 import pickle as pkl
 import traceback
-from sklearn.metrics import f1_score, precision_recall_fscore_support
+from sklearn.metrics import f1_score, precision_recall_fscore_support, accuracy_score
 from config import MODEL_REQUIRE_SEGMENT_ID, SPEC_TAGS
 import csv
 from pathlib import Path
@@ -330,12 +330,8 @@ class RelationDataFormatUniProcessor(DataProcessor):
         return text_a
 
 
-def simple_accuracy(labels, preds):
-    return (preds == labels).mean()
-
-
 def acc_and_f1(labels, preds):
-    acc = simple_accuracy(labels, preds)
+    acc = accuracy_score(labels, preds)
     pm, rm, fm, _ = precision_recall_fscore_support(y_true=labels, y_pred=preds, average='micro')
     pw, rw, fw, _ = precision_recall_fscore_support(y_true=labels, y_pred=preds, average='weighted')
     return {

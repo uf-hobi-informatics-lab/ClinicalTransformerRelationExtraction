@@ -58,7 +58,7 @@ if __name__ == '__main__':
     parser.add_argument("--pretrained_model", type=str,
                         help="The pretrained model file or directory for fine tuning.")
     parser.add_argument("--data_dir", type=str, required=True,
-                        help="The input data directory. Should have train.tsv")
+                        help="The input data directory. Should have at least a file named train.tsv")
     parser.add_argument("--new_model_dir", type=str, required=True,
                         help="directory for saving new model checkpoints (keep latest n only)")
     parser.add_argument("--predict_output_file", type=str, default=None,
@@ -67,8 +67,10 @@ if __name__ == '__main__':
                         help="Overwrite the content of the new model directory")
     parser.add_argument("--seed", default=3, type=int,
                         help='random seed')
-    parser.add_argument("--max_seq_length", default=128, type=int,
+    parser.add_argument("--max_seq_length", default=512, type=int,
                         help="maximum number of tokens allowed in each sentence")
+    parser.add_argument("--cache_data", action='store_true',
+                        help="Whether to cache the features after tokenization (save training initialization time)")
     parser.add_argument("--do_train", action='store_true',
                         help="Whether to run training.")
     parser.add_argument("--do_eval", action='store_true',
