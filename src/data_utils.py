@@ -258,7 +258,7 @@ class RelationDataFormatSepProcessor(DataProcessor):
         text_a = re.sub("\[ \* \*|\* \* \]", "", text_a)
         text_b = re.sub("\[ \* \*|\* \* \]", "", text_b)
         # ###########################################################
-        while len(self.tokenizer.tokenize(text_a) + self.tokenizer.tokenize(text_b)) > self.max_seq_len:
+        while len(self.tokenizer.tokenize(text_a) + self.tokenizer.tokenize(text_b)) > (self.max_seq_len-3):
             w1 = text_a.split(" ")
             w2 = text_b.split(" ")
             t1, t2 = [idx for (idx, w) in enumerate(w1) if w.lower() in SPEC_TAGS]
@@ -315,7 +315,7 @@ class RelationDataFormatUniProcessor(DataProcessor):
         # ### the procedure here should be done in preprocessing ####
         text_a = re.sub("\[ \* \*|\* \* \]", "", text_a)
         # ###########################################################
-        while len(self.tokenizer.tokenize(text_a)) > self.max_seq_len:
+        while len(self.tokenizer.tokenize(text_a)) > (self.max_seq_len-2):
             w1 = text_a.split(" ")
             t1, t2 = [idx for (idx, w) in enumerate(w1) if w.lower() in SPEC_TAGS]
             ss1, se1 = 0, len(w1)
