@@ -54,9 +54,9 @@ class TaskRunner(object):
         self.args = args
         # set up data processor
         if self.args.data_format_mode == 0:
-            self.data_processor = RelationDataFormatSepProcessor()
+            self.data_processor = RelationDataFormatSepProcessor(max_seq_len=self.args.max_seq_length)
         elif self.args.data_format_mode == 1:
-            self.data_processor = RelationDataFormatUniProcessor()
+            self.data_processor = RelationDataFormatUniProcessor(max_seq_len=self.args.max_seq_length)
         else:
             raise NotImplementedError("Only support 0, 1 but get data_format_mode as {}"
                                       .format(self.args.data_format_mode))
@@ -75,6 +75,7 @@ class TaskRunner(object):
         self.train_data_loader = None
         self.dev_data_loader = None
         self.test_data_loader = None
+        self.data_processor.set_tokenizer(self.tokenizer)
         self._load_data()
         if self.args.do_train:
             self._init_optimizer()

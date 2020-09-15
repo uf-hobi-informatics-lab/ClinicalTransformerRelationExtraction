@@ -49,7 +49,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     # parse arguments
     parser.add_argument("--model_type", default='bert', type=str, required=True,
-                        help="valid values: bert, roberta or xlnet")
+                        help="valid values: bert, roberta, albert or xlnet")
     parser.add_argument("--data_format_mode", default=0, type=int,
                         help="valid values: 0: sep mode - [CLS]S1[SEP]S2[SEP]; 1: uni mode - [CLS]S1S2[SEP]")
     parser.add_argument("--classification_scheme", default=0, type=int,
