@@ -1,32 +1,20 @@
 """
 This script is used for training and test
-
-We offer two types of training strategy: train-dev and 5CV
-
-In train-dev, we directly select the best model according to the performance on dev
-In train-dev, you have to decide the batch size and training epochs
-
-In 5CV, we screen a series of batch sizes and training epochs
-In 5CV, we determine the best hyper-parameters based on average 5CV performance
-In 5CV, the production model will be trained on whole whole training set (train+dev) with the best hyper-parameters
 """
 
 
 # from data_utils import convert_examples_to_relation_extraction_features
 from data_utils import (features2tensors, relation_extraction_data_loader,
                         batch_to_model_input, RelationDataFormatSepProcessor,
-                        RelationDataFormatUniProcessor, acc_and_f1, pkl_save, pkl_load)
+                        RelationDataFormatUniProcessor, acc_and_f1)
+from data_processing.io_utils import pkl_save, pkl_load
 from transformers import glue_convert_examples_to_features as convert_examples_to_relation_extraction_features
-from models import (BertForRelationIdentification, RoBERTaForRelationIdentification,
-                    XLNetForRelationIdentification, AlbertForRelationIdentification)
-from transformers import (BertConfig, RobertaConfig, XLNetConfig, AlbertConfig,
-                          BertTokenizer, RobertaTokenizer, XLNetTokenizer, AlbertTokenizer)
 import torch
 from tqdm import trange, tqdm
 import numpy as np
 from packaging import version
 from pathlib import Path
-from config import SPEC_TAGS
+from config import SPEC_TAGS, MODEL_DICT
 
 
 def get_linear_schedule_with_warmup(optimizer, num_warmup_steps, num_training_steps, last_epoch=-1):
@@ -42,16 +30,11 @@ def get_linear_schedule_with_warmup(optimizer, num_warmup_steps, num_training_st
 
 
 class TaskRunner(object):
-    model_dict = {
-        "bert": (BertForRelationIdentification, BertConfig, BertTokenizer),
-        "roberta": (RoBERTaForRelationIdentification, RobertaConfig, RobertaTokenizer),
-        "xlnet": (XLNetForRelationIdentification, XLNetConfig, XLNetTokenizer),
-        "albert": (AlbertForRelationIdentification, AlbertConfig, AlbertTokenizer)
-    }
 
     def __init__(self, args):
         super().__init__()
         self.args = args
+        self.model_dict = MODEL_DICT
         # set up data processor
         if self.args.data_format_mode == 0:
             self.data_processor = RelationDataFormatSepProcessor(max_seq_len=self.args.max_seq_length)
@@ -101,6 +84,7 @@ class TaskRunner(object):
                     batch_output = self.model(**batch_input)
                     loss = batch_output[0]
                 loss = loss / self.args.gradient_accumulation_steps
+                tr_loss += loss.item()
                 if self.args.fp16:
                     if self._use_amp_for_fp16_from == 1:
                         self.amp_scaler.scale(loss).backward()
@@ -126,6 +110,9 @@ class TaskRunner(object):
                         self.optimizer.step()
                     if self.args.do_warmup:
                         self.scheduler.step()
+                    # batch_iter.set_postfix({"sloss": loss.item(), "tloss": tr_loss/step})
+                if (step+1) % 500 == 0:
+                    self.args.logger.info("total loss: {}; average loss: {}".format(tr_loss, tr_loss/step))
             batch_iter.close()
         epoch_iter.close()
         self._save_model()
@@ -195,6 +182,7 @@ class TaskRunner(object):
 
     def _init_trained_model(self):
         """initialize a fine-tuned model for prediction"""
+        self.args.logger.info("Init model from {} for prediction".format(self.args.new_model_dir))
         model, config, tokenizer = self.model_dict[self.args.model_type]
         self.config = config.from_pretrained(self.args.new_model_dir)
         self.tokenizer = tokenizer.from_pretrained(self.args.new_model_dir, do_lower_case=self.args.do_lower_case)
@@ -246,8 +234,7 @@ class TaskRunner(object):
                 preds = logits if preds is None else np.append(preds, logits, axis=0)
         batch_iter.close()
         temp_loss = temp_loss / total_sample_num
-        preds = np.argmax(preds)
-
+        preds = np.argmax(preds, axis=-1)
         return preds, temp_loss
 
     def _load_data(self):
@@ -257,6 +244,7 @@ class TaskRunner(object):
             # load examples from files or cache
             if self.args.cache_data and cached_examples_file.exists():
                 train_examples = pkl_load(cached_examples_file)
+                self.args.logger.info("load training data from cached file: {}".format(cached_examples_file))
             elif self.args.cache_data and not cached_examples_file.exists():
                 train_examples = self.data_processor.get_train_examples()
                 pkl_save(train_examples, cached_examples_file)
@@ -297,6 +285,7 @@ class TaskRunner(object):
                 self.args.model_type, self.args.data_format_mode, self.args.max_seq_length)
             # load examples from files or cache
             if self.args.cache_data and cached_examples_file.exists():
+                self.args.logger.info("load test data from cached file: {}".format(cached_examples_file))
                 test_examples = pkl_load(cached_examples_file)
             elif self.args.cache_data and not cached_examples_file.exists():
                 test_examples = self.data_processor.get_test_examples()

@@ -5,7 +5,7 @@ import random
 from utils import TransformerLogger
 from task import TaskRunner
 from pathlib import Path
-from data_utils import save_text
+from data_processing.io_utils import save_text
 
 
 def set_seed(args):

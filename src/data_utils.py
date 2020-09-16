@@ -1,4 +1,3 @@
-import pickle as pkl
 import traceback
 from sklearn.metrics import f1_score, precision_recall_fscore_support, accuracy_score
 from config import MODEL_REQUIRE_SEGMENT_ID, SPEC_TAGS
@@ -7,28 +6,6 @@ from pathlib import Path
 import torch
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, TensorDataset
 import re
-
-
-def load_text(ifn):
-    with open(ifn, "r") as f:
-        txt = f.read()
-    return txt
-
-
-def save_text(text, ofn):
-    with open(ofn, "w") as f:
-        f.write(text)
-
-
-def pkl_save(data, file):
-    with open(file, "wb") as f:
-        pkl.dump(data, f)
-
-
-def pkl_load(file):
-    with open(file, "rb") as f:
-        data = pkl.load(f)
-    return data
 
 
 def try_catch_annotator(func):

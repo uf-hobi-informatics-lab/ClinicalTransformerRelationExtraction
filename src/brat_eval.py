@@ -473,7 +473,7 @@ class Corpora(object):
         return sorted(gs_tags, key=lambda x: len(x)), sorted(gs_rels, key=lambda x: len(x))
 
 
-def eval_files(f1, f2, verbose=0):
+def eval_files(f1, f2, verbose=False):
     """Where the magic begins."""
     corpora = Corpora(f1, f2)
     annotations = corpora.get_annotations()
@@ -485,6 +485,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Evaluation script for Brat formatted data')
     parser.add_argument('--f1', help='First data folder path (gold)')
     parser.add_argument('--f2', help='Second data folder path (system)')
-    parser.add_argument('-v', '--verbose', action="store true", help='verbosity')
+    parser.add_argument('-v', '--verbose', action='store_true', help='verbosity')
     args = parser.parse_args()
-    eval_files(os.path.abspath(args.f1), os.path.abspath(args.f2), int(args.verbose))
+    eval_files(os.path.abspath(args.f1), os.path.abspath(args.f2), args.verbose)
