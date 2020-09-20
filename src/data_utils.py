@@ -9,12 +9,14 @@ import re
 
 
 def try_catch_annotator(func):
+
     def try_catch(*args, **kwargs):
         try:
             return func(*args, **kwargs)
         except Exception:
             traceback.print_exc()
             return None
+
     return try_catch
 
 
@@ -53,15 +55,20 @@ def convert_examples_to_relation_extraction_features(
         examples, label2idx, tokenizer, max_length=128):
     """This function is the same as transformers.glue_convert_examples_to_features"""
     features = []
+
     for idx, example in enumerate(examples):
         text_a, text_b = example.text_a, example.text_b
+
         tokens_a = tokenizer.convert_tokens_to_ids(tokenizer.tokenize(text_a))
+
         if text_b:
             tokens_b = tokenizer.convert_tokens_to_ids(tokenizer.tokenize(text_b))
         else:
             tokens_b = None
+
         inputs = tokenizer.encode_plus(
             tokens_a, tokens_b, pad_to_max_length=True, max_length=max_length, truncation=False)
+
         # Truncate tokens
         label = label2idx[example.label]
         feature = InputFeatures(**inputs, label=label)
@@ -83,14 +90,18 @@ def features2tensors(features, logger=None):
     tensor_attention_masks = []
     tensor_token_type_ids = []
     tensor_label_ids = []
+
     for idx, feature in enumerate(features):
         if logger and idx < 3:
             logger.info("Feature{}:\n{}\n".format(idx+1, feature))
+
         tensor_input_ids.append(feature.input_ids)
         tensor_attention_masks.append(feature.attention_mask)
         tensor_label_ids.append(feature.label)
+
         if feature.token_type_ids:
             tensor_token_type_ids.append(feature.token_type_ids)
+
     tensor_input_ids = torch.tensor(tensor_input_ids, dtype=torch.long)
     tensor_attention_masks = torch.tensor(tensor_attention_masks, dtype=torch.long)
     tensor_label_ids = torch.tensor(tensor_label_ids, dtype=torch.long)
@@ -119,10 +130,12 @@ def relation_extraction_data_loader(dataset, batch_size=2, task='train', logger=
         raise ValueError('task argument only support train or test but get {}'.format(task))
 
     data_loader = DataLoader(dataset, sampler=sampler, batch_size=batch_size, pin_memory=True)
+
     return data_loader
 
 
 def batch_to_model_input(batch, model_type="bert", device=torch.device("cpu")):
+
     return {"input_ids": batch[0].to(device),
             "attention_mask": batch[1].to(device),
             "labels": batch[3].to(device),
@@ -131,11 +144,13 @@ def batch_to_model_input(batch, model_type="bert", device=torch.device("cpu")):
 
 class DataProcessor(object):
     """Base class for data converters for sequence classification data sets."""
+
     def __init__(self, data_dir=None, max_seq_len=128):
         if data_dir:
             self.data_dir = Path(data_dir)
         else:
             self.data_dir = data_dir
+
         self.tokenizer = None
         self.max_seq_len = max_seq_len
 
@@ -148,18 +163,21 @@ class DataProcessor(object):
     def get_train_examples(self, filename=None):
         """See base class."""
         input_file_name = self.data_dir / filename if filename else self.data_dir / "train.tsv"
+
         return self._create_examples(
             self._read_tsv(input_file_name), "train")
 
     def get_dev_examples(self, filename=None):
         """See base class."""
         input_file_name = self.data_dir / filename if filename else self.data_dir / "dev.tsv"
+
         return self._create_examples(
             self._read_tsv(input_file_name), "dev")
 
     def get_test_examples(self, filename=None):
         """See base class."""
         input_file_name = self.data_dir / filename if filename else self.data_dir / "test.tsv"
+
         return self._create_examples(
             self._read_tsv(input_file_name), "test")
 
@@ -170,14 +188,15 @@ class DataProcessor(object):
         """
         lines = self._read_tsv(self.data_dir / filename if filename else self.data_dir / "train.tsv")
         unique_labels = set()
+
         for (i, line) in enumerate(lines):
             if i == 0:
                 continue
             unique_labels.add(line[0])
+
         label2idx = {k: v for v, k in enumerate(unique_labels)}
         idx2label = {v: k for k, v in label2idx.items()}
-        # pkl_save((label2idx, idx2label), "")
-        print(unique_labels)
+
         return unique_labels, label2idx, idx2label
 
     def _create_examples(self, lines, set_type):
@@ -188,12 +207,14 @@ class DataProcessor(object):
     @staticmethod
     def _read_tsv(input_file, quotechar=None):
         """Reads a tab separated value file."""
+        lines = []
+
         with open(input_file, "r", encoding="utf-8") as f:
             reader = csv.reader(f, delimiter="\t", quotechar=quotechar)
-            lines = []
             for line in reader:
                 lines.append(line)
-            return lines
+
+        return lines
 
 
 class RelationDataFormatSepProcessor(DataProcessor):
@@ -205,6 +226,7 @@ class RelationDataFormatSepProcessor(DataProcessor):
     def _create_examples(self, lines, set_type):
         """Creates examples for the training and dev sets."""
         examples = []
+
         for (i, line) in enumerate(lines):
             if i == 0:
                 continue
@@ -217,8 +239,10 @@ class RelationDataFormatSepProcessor(DataProcessor):
             # 2. use truncate strategy
             # we adopt truncate way (2) in this implementation as _process_seq_len
             text_a, text_b = self._process_seq_len(text_a, text_b)
+
             examples.append(
                 InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
+
         return examples
 
     def _process_seq_len(self, text_a, text_b):
@@ -235,25 +259,33 @@ class RelationDataFormatSepProcessor(DataProcessor):
         text_a = re.sub("\[ \* \*|\* \* \]", "", text_a)
         text_b = re.sub("\[ \* \*|\* \* \]", "", text_b)
         # ###########################################################
+
         while len(self.tokenizer.tokenize(text_a) + self.tokenizer.tokenize(text_b)) > (self.max_seq_len-3):
             w1 = text_a.split(" ")
             w2 = text_b.split(" ")
+
             t1, t2 = [idx for (idx, w) in enumerate(w1) if w.lower() in SPEC_TAGS]
             t3, t4 = [idx for (idx, w) in enumerate(w2) if w.lower() in SPEC_TAGS]
+
             ss1, se1 = 0, len(w1)
             ss2, se2 = 0, len(w2)
+
             a1 = t1 - ss1
             b1 = se1 - t2
+
             if a1 > b1:
                 w1.pop(0)
             else:
                 w1.pop(-1)
+
             a2 = t3 - ss2
             b2 = se2 - t4
+
             if a2 > b2:
                 w2.pop(0)
             else:
                 w2.pop(-1)
+
             text_a = " ".join(w1)
             text_b = " ".join(w2)
 
@@ -269,6 +301,7 @@ class RelationDataFormatUniProcessor(DataProcessor):
     def _create_examples(self, lines, set_type):
         """Creates examples for the training and dev sets."""
         examples = []
+
         for (i, line) in enumerate(lines):
             if i == 0:
                 continue
@@ -281,8 +314,10 @@ class RelationDataFormatUniProcessor(DataProcessor):
             # 1. skip all these cases
             # 2. use truncate strategy (truncate from both side) (adopted)
             text_a = self._process_seq_len(text_a)
+
             examples.append(
                 InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+
         return examples
 
     def _process_seq_len(self, text_a):
@@ -292,16 +327,20 @@ class RelationDataFormatUniProcessor(DataProcessor):
         # ### the procedure here should be done in preprocessing ####
         text_a = re.sub("\[ \* \*|\* \* \]", "", text_a)
         # ###########################################################
+
         while len(self.tokenizer.tokenize(text_a)) > (self.max_seq_len-2):
             w1 = text_a.split(" ")
             t1, t2 = [idx for (idx, w) in enumerate(w1) if w.lower() in SPEC_TAGS]
             ss1, se1 = 0, len(w1)
+
             a1 = t1 - ss1
             b1 = se1 - t2
+
             if a1 > b1:
                 w1.pop(0)
             else:
                 w1.pop(-1)
+
             text_a = " ".join(w1)
 
         return text_a
@@ -311,6 +350,7 @@ def acc_and_f1(labels, preds):
     acc = accuracy_score(labels, preds)
     pm, rm, fm, _ = precision_recall_fscore_support(y_true=labels, y_pred=preds, average='micro')
     pw, rw, fw, _ = precision_recall_fscore_support(y_true=labels, y_pred=preds, average='weighted')
+
     return {
         "acc": acc,
         "F1-micro": fm, "Pre-micro": pm, "Rec-micro": rm,

@@ -24,6 +24,7 @@ def load_mappings(map_file):
             continue
         info = line.split("\t")
         maps.append(info[-3:])
+
     return maps
 
 
@@ -32,36 +33,33 @@ def load_predictions(result_file):
     text = load_text(result_file)
     for each in text.strip().split("\n"):
         results.append(each.strip())
+
     return results
 
 
-def map_results(preds, maps):
-    llp = len(preds)
-    llm = len(maps)
-    assert llp == llm, \
-        "prediction results and mappings should have same amount data, but got preds: {} and maps: {}".format(llp, llm)
+def map_results(res):
     mapped_preds = defaultdict(list)
     prev_fid = "no previous file id"
     rel_idx = 1
-    for each in zip(maps, preds):
-        rel_type = each[1]
-        # if rel_type == NON_RELATION_TAG:
-        if rel_type == "Not-Rel":
-            continue
-        arg1, arg2, fid = each[0]
+
+    for each in res:
+        fid, rt, arg1, arg2 = each
         if prev_fid != fid:
             prev_fid = fid
             rel_idx = 1
-        brat_res = BRAT_REL_TEMPLATE.format(rel_idx, rel_type, arg1, arg2)
+        brat_res = BRAT_REL_TEMPLATE.format(rel_idx, rt, arg1, arg2)
         mapped_preds[fid].append(brat_res)
         rel_idx += 1
+
     return mapped_preds
 
 
 def output_results(mapped_predictions, entity_data_dir, output_dir):
     entity_data_dir = Path(entity_data_dir)
+
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+
     for fid in entity_data_dir.glob("*.ann"):
         fid_key = fid.stem
         ofn = output_dir / "{}.ann".format(fid_key)
@@ -75,24 +73,63 @@ def output_results(mapped_predictions, entity_data_dir, output_dir):
             save_text(entities, ofn)
 
 
+def combine_maps_preditions(args):
+    comb_map_pred = []
+
+    for mf, pf in zip(args.test_data_file, args.predict_result_file):
+        maps = load_mappings(mf)
+        preds = load_predictions(pf)
+        llp = len(preds)
+        llm = len(maps)
+        assert llp == llm, \
+            f"prediction results and mappings should have same amount data, but got preds: {llp} and maps: {llm}"
+        for m, rel_type in zip(maps, preds):
+            if rel_type == NON_RELATION_TAG:
+                continue
+            arg1, arg2, fid = m
+            comb_map_pred.append((fid, rel_type, arg1, arg2))
+
+    # comb_map_pred = sorted(comb_map_pred, key=lambda x: x[0])
+    comb_map_pred.sort(key=lambda x: x[0])
+    return comb_map_pred
+
+
 def app(args):
-    mappings = load_mappings(args.test_data)
-    predictions = load_predictions(args.predict_result_file)
-    mapped_predictions = map_results(predictions, mappings)
-    output_results(mapped_predictions, args.entity_data_dir, args.brat_result_output_dir)
+    lltf = len(args.test_data_file)
+    llpf = len(args.predict_result_file)
+    assert lltf == llpf, \
+        f"test and prediction file number should be same but get test: {lltf} and preduction {llpf}."
+
+    combined_results = combine_maps_preditions(args)
+
+    combined_results = map_results(combined_results)
+
+    output_results(combined_results, args.entity_data_dir, args.brat_result_output_dir)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     # parse arguments
-    # TODO change test_data to mapping file
-    parser.add_argument("--test_data", type=str, required=True,
-                        help="The test data file in which we need to read the maps")
+    """
+        To input multiple test data and prediction files, using following syntax in terminal;
+        You need to make sure the files order between test and prediction is correct
+        
+        bash:
+            python post_processing.py --test_data_file tf1.txt --test_data_file tf2.txt --predict_result_file res1.txt
+                --predict_result_file res2.txx
+        
+        in the program:
+            args.test_data_file = ['tf1.txt', 'tf2.txt']
+            args.predict_result_file = ['res1.txt', 'res2.txt']
+    """
+    parser.add_argument("--test_data_file", type=str, action='append', required=True,
+                        help="The test data file in which we need to read the maps; available to accept multiple files")
     parser.add_argument("--entity_data_dir", type=str, required=True,
                         help="The annotation files with all the entities")
-    parser.add_argument("--predict_result_file", type=str, required=True,
-                        help="prediction results")
+    parser.add_argument("--predict_result_file", action='append', type=str, required=True,
+                        help="prediction results; available to accept multiple files")
     parser.add_argument("--brat_result_output_dir", type=str, required=True,
                         help="prediction results")
     pargs = parser.parse_args()
+
     app(pargs)

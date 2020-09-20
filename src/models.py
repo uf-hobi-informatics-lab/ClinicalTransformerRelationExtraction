@@ -10,6 +10,7 @@ from transformers import (BertForSequenceClassification, BertModel,
 
 
 class BaseModel(PreTrainedModel):
+
     def __init__(self, config):
         super().__init__(config)
         if "tags" in config.__dict__:
@@ -26,9 +27,13 @@ class BaseModel(PreTrainedModel):
             self.num_labels = 2
 
         self.loss_fct = CrossEntropyLoss()
-        self.classifier1 = nn.Linear(config.hidden_size, config.num_labels)
-        self.classifier2 = nn.Linear(config.hidden_size * 3, config.num_labels)
-        self.classifier3 = nn.Linear(config.hidden_size * 5, config.num_labels)
+        if self.scheme == 1:
+            rate = 3
+        elif self.scheme == 2:
+            rate = 5
+        else:
+            rate = 1
+        self.classifier = nn.Linear(config.hidden_size * rate, config.num_labels)
 
     @staticmethod
     def special_tag_representation(seq_output, input_ids, special_tag):
@@ -44,15 +49,14 @@ class BaseModel(PreTrainedModel):
             for each_tag in [self.spec_tag1, self.spec_tag2]:
                 seq_tags.append(self.special_tag_representation(seq_output, input_ids, each_tag))
             new_pooled_output = torch.cat((pooled_output, *seq_tags), dim=1)
-            logits = self.classifier2(new_pooled_output)
         elif self.scheme == 2:
             seq_tags = []
             for each_tag in [self.spec_tag1, self.spec_tag2, self.spec_tag3, self.spec_tag4]:
                 seq_tags.append(self.special_tag_representation(seq_output, input_ids, each_tag))
             new_pooled_output = torch.cat((pooled_output, *seq_tags), dim=1)
-            logits = self.classifier3(new_pooled_output)
         else:
-            logits = self.classifier1(pooled_output)
+            new_pooled_output = pooled_output
+        logits = self.classifier(new_pooled_output)
 
         return logits
 

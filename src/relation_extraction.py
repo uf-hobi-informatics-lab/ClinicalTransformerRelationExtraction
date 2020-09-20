@@ -16,18 +16,22 @@ def set_seed(args):
 
 def app(gargs):
     set_seed(gargs)
+
     # do_eval is used with do_train in most cases for 5-CV
     if gargs.do_eval and not gargs.do_train:
         raise RuntimeError("Evaluation mode (do_eval) is only available when do_train is used.\n"
                            "You may want to use do_predict instead.")
+
     # make it case in-sensitive
     gargs.model_type = gargs.model_type.lower()
     task_runner = TaskRunner(gargs)
     if gargs.do_train:
         if Path(gargs.new_model_dir).exists() and not gargs.overwrite_model_dir:
             raise RuntimeError("{gargs.new_model_dir} is exist and overwrite this dir is not permitted.")
+
         # training
         task_runner.train()
+
         if gargs.do_eval:
             # eval on dev
             eval_res = task_runner.eval()
@@ -36,10 +40,12 @@ def app(gargs):
             for k, v in eval_res.items():
                 eval_output += "{}:{}\n".format(k, v)
             save_text(eval_output, gargs.new_model_dir/"eval_result.txt")
+
     if gargs.do_predict:
         # run prediction
         preds = task_runner.predict()
         pred_res = "\n".join([str(pred) for pred in preds])
+
         # predict_output_file must be a file, we will create parent dir automatically
         Path(gargs.predict_output_file).parent.mkdir(parents=True, exist_ok=True)
         save_text(pred_res, gargs.predict_output_file)
@@ -112,8 +118,10 @@ if __name__ == '__main__':
     parser.add_argument("--fp16_opt_level", type=str, default="O1",
                         help="For fp16: Apex AMP optimization level selected in ['O0', 'O1', 'O2', and 'O3']."
                              "See details at https://nvidia.github.io/apex/amp.html")
+
     # TODO: distributed parallel training on multiple GPU
     args = parser.parse_args()
+
     # other setup
     args.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     args.logger = TransformerLogger(logger_file=args.log_file, logger_level='i').get_logger()

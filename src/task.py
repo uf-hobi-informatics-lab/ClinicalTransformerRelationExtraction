@@ -33,8 +33,10 @@ class TaskRunner(object):
 
     def __init__(self, args):
         super().__init__()
+
         self.args = args
         self.model_dict = MODEL_DICT
+
         # set up data processor
         if self.args.data_format_mode == 0:
             self.data_processor = RelationDataFormatSepProcessor(max_seq_len=self.args.max_seq_length)
@@ -43,7 +45,9 @@ class TaskRunner(object):
         else:
             raise NotImplementedError("Only support 0, 1 but get data_format_mode as {}"
                                       .format(self.args.data_format_mode))
+
         self.data_processor.set_data_dir(self.args.data_dir)
+
         # init or reload model
         if self.args.do_train:
             # init amp for fp16 (mix precision training)
@@ -58,24 +62,32 @@ class TaskRunner(object):
         self.train_data_loader = None
         self.dev_data_loader = None
         self.test_data_loader = None
+
         self.data_processor.set_tokenizer(self.tokenizer)
         self._load_data()
+
         if self.args.do_train:
             self._init_optimizer()
+
         self.args.logger.info("Model Config:\n{}".format(self.config))
         self.args.logger.info("All parameters:\n{}".format(self.args))
 
     def train(self):
         # create data loader
+        self.args.logger.info("start training...")
         tr_loss = .0
-        epoch_iter = trange(self.args.num_train_epochs, desc="Epoch", disable=False)
+        t_step = 0
+
+        epoch_iter = trange(self.args.num_train_epochs, desc="Epoch", disable=self.args.progress_bar)
         for epoch in epoch_iter:
-            batch_iter = tqdm(self.train_data_loader, desc="Batch", disable=False)
+            batch_iter = tqdm(self.train_data_loader, desc="Batch", disable=self.args.progress_bar)
             batch_total_step = len(self.train_data_loader)
             for step, batch in enumerate(batch_iter):
                 self.model.train()
                 self.model.zero_grad()
+
                 batch_input = batch_to_model_input(batch, model_type=self.args.model_type, device=self.args.device)
+
                 if self.args.fp16 and self._use_amp_for_fp16_from == 1:
                     with self.amp.autocast():
                         batch_output = self.model(**batch_input)
@@ -83,8 +95,10 @@ class TaskRunner(object):
                 else:
                     batch_output = self.model(**batch_input)
                     loss = batch_output[0]
+
                 loss = loss / self.args.gradient_accumulation_steps
                 tr_loss += loss.item()
+
                 if self.args.fp16:
                     if self._use_amp_for_fp16_from == 1:
                         self.amp_scaler.scale(loss).backward()
@@ -93,6 +107,7 @@ class TaskRunner(object):
                             scaled_loss.backward()
                 else:
                     loss.backward()
+
                 # update gradient
                 if (step + 1) % self.args.gradient_accumulation_steps == 0 or (step + 1) == batch_total_step:
                     if self.args.fp16:
@@ -112,62 +127,82 @@ class TaskRunner(object):
                         self.scheduler.step()
                     # batch_iter.set_postfix({"sloss": loss.item(), "tloss": tr_loss/step})
                 if (step+1) % 500 == 0:
-                    self.args.logger.info("total loss: {}; average loss: {}".format(tr_loss, tr_loss/step))
+                    self.args.logger.info("total loss: {}; average loss: {}".format(tr_loss, tr_loss/t_step))
+
+                t_step += 1
+
             batch_iter.close()
         epoch_iter.close()
+
         self._save_model()
+        self.args.logger.info("training finish and the trained model is saved.")
 
     def eval(self):
-        # this is for dev
+        self.args.logger.info("start evaluation...")
+
+        # this is done on dev
         true_labels = np.array([dev_fea.label for dev_fea in self.dev_features])
         preds, eval_loss = self._run_eval(self.dev_data_loader)
         eval_metric = acc_and_f1(labels=true_labels, preds=preds)
+
         return eval_metric
 
     def predict(self):
+        self.args.logger.info("start prediction...")
         # this is for prediction
         preds, _ = self._run_eval(self.test_data_loader)
         # convert predicted label idx to real label
+        self.args.logger.info("label to index for prediction:\n{}".format(self.label2idx))
         preds = [self.idx2label[pred] for pred in preds]
+
         return preds
 
     def _init_new_model(self):
         """initialize a new model for fine-tuning"""
         model, config, tokenizer = self.model_dict[self.args.model_type]
+
         # init tokenizer and add special tags
         self.tokenizer = tokenizer.from_pretrained(self.args.pretrained_model, do_lower_case=self.args.do_lower_case)
         last_token_idx = len(self.tokenizer)
         self.tokenizer.add_tokens(SPEC_TAGS)
         spec_token_new_ids = tuple([(last_token_idx + idx) for idx in range(len(self.tokenizer) - last_token_idx)])
+
         # init config
         unique_labels, label2idx, idx2label = self.data_processor.get_labels()
+        self.args.logger.info("label to index:\n{}".format(label2idx))
         num_labels = len(unique_labels)
         self.label2idx = label2idx
         self.idx2label = idx2label
+
         self.config = config.from_pretrained(self.args.pretrained_model, num_labels=num_labels)
         self.config.tags = spec_token_new_ids
         self.config.scheme = self.args.classification_scheme
+
         # init model
         self.model = model.from_pretrained(self.args.pretrained_model, config=self.config)
         total_token_num = len(self.tokenizer)
         self.model.resize_token_embeddings(total_token_num)
         self.config.vocab_size = total_token_num
+
         # load model to device
         self.model.to(self.args.device)
 
     def _init_optimizer(self):
         # set up optimizer
         no_decay = ["bias", "LayerNorm.weight"]
+
         optimizer_grouped_parameters = [
             {'params': [p for n, p in self.model.named_parameters() if not any(nd in n for nd in no_decay)],
              'weight_decay': self.args.weight_decay},
             {'params': [p for n, p in self.model.named_parameters() if any(nd in n for nd in no_decay)],
              'weight_decay': 0.0}
         ]
+
         self.optimizer = torch.optim.AdamW(optimizer_grouped_parameters,
                                            lr=self.args.learning_rate,
                                            eps=self.args.adam_epsilon)
         self.args.logger.info("The optimizer detail:\n {}".format(self.optimizer))
+
         # set up optimizer warm up scheduler (you can set warmup_ratio=0 to deactivated this function)
         if self.args.do_warmup:
             t_total = len(self.train_data_loader) // self.args.gradient_accumulation_steps * self.args.num_train_epochs
@@ -175,6 +210,7 @@ class TaskRunner(object):
             self.scheduler = get_linear_schedule_with_warmup(self.optimizer,
                                                              num_warmup_steps=warmup_steps,
                                                              num_training_steps=t_total)
+
         # mix precision training
         if self.args.fp16 and self._use_amp_for_fp16_from == 2:
             self.model, self.optimizer = self.amp.initialize(self.model, self.optimizer,
@@ -183,10 +219,12 @@ class TaskRunner(object):
     def _init_trained_model(self):
         """initialize a fine-tuned model for prediction"""
         self.args.logger.info("Init model from {} for prediction".format(self.args.new_model_dir))
+
         model, config, tokenizer = self.model_dict[self.args.model_type]
         self.config = config.from_pretrained(self.args.new_model_dir)
         self.tokenizer = tokenizer.from_pretrained(self.args.new_model_dir, do_lower_case=self.args.do_lower_case)
         self.model = model.from_pretrained(self.args.new_model_dir, config=self.config)
+
         # load label2idx
         self.label2idx, self.idx2label = pkl_load(Path(self.args.new_model_dir)/"label_index.pkl")
         # load model to device
@@ -220,10 +258,12 @@ class TaskRunner(object):
         temp_loss = .0
         # set model to evaluate mode
         self.model.eval()
+
         # create dev data batch iteration
-        batch_iter = tqdm(data_loader, desc="Batch", disable=False)
+        batch_iter = tqdm(data_loader, desc="Batch", disable=self.args.progress_bar)
         total_sample_num = len(batch_iter)
         preds = None
+
         for batch in batch_iter:
             batch_input = batch_to_model_input(batch, model_type=self.args.model_type, device=self.args.device)
             with torch.no_grad():
@@ -232,15 +272,18 @@ class TaskRunner(object):
                 temp_loss += loss.item()
                 logits = logits.detach().cpu().numpy()
                 preds = logits if preds is None else np.append(preds, logits, axis=0)
+
         batch_iter.close()
         temp_loss = temp_loss / total_sample_num
         preds = np.argmax(preds, axis=-1)
+
         return preds, temp_loss
 
     def _load_data(self):
         if self.args.do_train:
             cached_examples_file = Path(self.args.data_dir) / "cached_{}_{}_{}_train.pkl".format(
                 self.args.model_type, self.args.data_format_mode, self.args.max_seq_length)
+
             # load examples from files or cache
             if self.args.cache_data and cached_examples_file.exists():
                 train_examples = pkl_load(cached_examples_file)
@@ -250,6 +293,7 @@ class TaskRunner(object):
                 pkl_save(train_examples, cached_examples_file)
             else:
                 train_examples = self.data_processor.get_train_examples()
+
             # convert examples to tensor
             train_features = convert_examples_to_relation_extraction_features(
                 train_examples,
@@ -257,11 +301,14 @@ class TaskRunner(object):
                 max_length=self.args.max_seq_length,
                 label_list=self.label2idx,
                 output_mode="classification")
+
             self.train_data_loader = relation_extraction_data_loader(
                 train_features, batch_size=self.args.train_batch_size, task="train", logger=self.args.logger)
+
         if self.args.do_eval:
             cached_examples_file = Path(self.args.data_dir) / "cached_{}_{}_{}_dev.pkl".format(
                 self.args.model_type, self.args.data_format_mode, self.args.max_seq_length)
+
             # load examples from files or cache
             if self.args.cache_data and cached_examples_file.exists():
                 dev_examples = pkl_load(cached_examples_file)
@@ -270,6 +317,7 @@ class TaskRunner(object):
                 pkl_save(dev_examples, cached_examples_file)
             else:
                 dev_examples = self.data_processor.get_dev_examples()
+
             # example2feature
             dev_features = convert_examples_to_relation_extraction_features(
                 dev_examples,
@@ -278,11 +326,14 @@ class TaskRunner(object):
                 label_list=self.label2idx,
                 output_mode="classification")
             self.dev_features = dev_features
+
             self.dev_data_loader = relation_extraction_data_loader(
                 dev_features, batch_size=self.args.train_batch_size, task="test", logger=self.args.logger)
+
         if self.args.do_predict:
             cached_examples_file = Path(self.args.data_dir) / "cached_{}_{}_{}_test.pkl".format(
                 self.args.model_type, self.args.data_format_mode, self.args.max_seq_length)
+
             # load examples from files or cache
             if self.args.cache_data and cached_examples_file.exists():
                 self.args.logger.info("load test data from cached file: {}".format(cached_examples_file))
@@ -292,6 +343,7 @@ class TaskRunner(object):
                 pkl_save(test_examples, cached_examples_file)
             else:
                 test_examples = self.data_processor.get_test_examples()
+
             # example2feature
             test_features = convert_examples_to_relation_extraction_features(
                 test_examples,
@@ -299,5 +351,6 @@ class TaskRunner(object):
                 max_length=self.args.max_seq_length,
                 label_list=self.label2idx,
                 output_mode="classification")
+
             self.test_data_loader = relation_extraction_data_loader(
                 test_features, batch_size=self.args.eval_batch_size, task="test", logger=self.args.logger)
