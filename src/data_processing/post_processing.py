@@ -11,7 +11,7 @@ We will not copy the original text to the results output dir
 import argparse
 from pathlib import Path
 import numpy as np
-from io_utils import load_text, save_text
+from io_utils import load_text, save_text, pkl_load
 from collections import defaultdict
 from data_format_conf import NON_RELATION_TAG, BRAT_REL_TEMPLATE
 
@@ -73,7 +73,7 @@ def output_results(mapped_predictions, entity_data_dir, output_dir):
             save_text(entities, ofn)
 
 
-def combine_maps_preditions(args):
+def combine_maps_predictions_mul(args):
     comb_map_pred = []
 
     for mf, pf in zip(args.test_data_file, args.predict_result_file):
@@ -89,7 +89,43 @@ def combine_maps_preditions(args):
             arg1, arg2, fid = m
             comb_map_pred.append((fid, rel_type, arg1, arg2))
 
-    # comb_map_pred = sorted(comb_map_pred, key=lambda x: x[0])
+    comb_map_pred.sort(key=lambda x: x[0])
+    return comb_map_pred
+
+
+def load_mappings_bin(map_file):
+    maps = []
+    text = load_text(map_file)
+    for idx, line in enumerate(text.strip().split("\n")):
+        if idx == 0:
+            continue
+        info = line.split("\t")
+        maps.append(info[-5:])
+
+    return maps
+
+
+def combine_maps_predictions_bin(args):
+    if not args.type_map:
+        raise RuntimeError("no type maps (entity-relation) provided. See help.")
+    type_maps = pkl_load(args.type_map)
+
+    comb_map_pred = []
+
+    for mf, pf in zip(args.test_data_file, args.predict_result_file):
+        maps = load_mappings_bin(mf)
+        preds = load_predictions(pf)
+        llp = len(preds)
+        llm = len(maps)
+        assert llp == llm, \
+            f"prediction results and mappings should have same amount data, but got preds: {llp} and maps: {llm}"
+        for m, rel_type in zip(maps, preds):
+            if rel_type == NON_RELATION_TAG:
+                continue
+            en_type_1, en_type_2, arg1, arg2, fid = m
+            real_rel_type = type_maps[(en_type_1, en_type_2)]
+            comb_map_pred.append((fid, real_rel_type, arg1, arg2))
+
     comb_map_pred.sort(key=lambda x: x[0])
     return comb_map_pred
 
@@ -100,10 +136,14 @@ def app(args):
     assert lltf == llpf, \
         f"test and prediction file number should be same but get test: {lltf} and preduction {llpf}."
 
-    combined_results = combine_maps_preditions(args)
-
+    if args.mode == "mul":
+        combined_results = combine_maps_predictions_mul(args)
+    elif args.mode == "bin":
+        combined_results = combine_maps_predictions_bin(args)
+    else:
+        raise RuntimeError("expect mode to be mul or bin but get {}".format(args.mode))
+    
     combined_results = map_results(combined_results)
-
     output_results(combined_results, args.entity_data_dir, args.brat_result_output_dir)
 
 
@@ -122,6 +162,10 @@ if __name__ == '__main__':
             args.test_data_file = ['tf1.txt', 'tf2.txt']
             args.predict_result_file = ['res1.txt', 'res2.txt']
     """
+    parser.add_argument("--mode", type=str, default='mul', required=True, 
+                        help="we have two mode for binary (bin) and multiple (mul) classes classification")
+    parser.add_argument("--type_map", type=str, default=None,
+                        help="a map of entity pair types to relation types (only use when mode is bin)")
     parser.add_argument("--test_data_file", type=str, action='append', required=True,
                         help="The test data file in which we need to read the maps; available to accept multiple files")
     parser.add_argument("--entity_data_dir", type=str, required=True,
