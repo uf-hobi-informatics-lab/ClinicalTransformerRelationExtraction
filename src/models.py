@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 from torch.nn import CrossEntropyLoss
+from utils import TransformerLogger
 from transformers.modeling_utils import SequenceSummary
 from transformers import (BertForSequenceClassification, BertModel,
                           XLNetForSequenceClassification, XLNetModel,
@@ -9,44 +10,43 @@ from transformers import (BertForSequenceClassification, BertModel,
                           PreTrainedModel)
 
 
+logger = TransformerLogger(logger_level='i').get_logger()
+
+
 class BaseModel(PreTrainedModel):
 
     def __init__(self, config):
         super().__init__(config)
-        if "tags" in config.__dict__:
-            self.spec_tag1, self.spec_tag2, self.spec_tag3, self.spec_tag4 = config.tags
-        else:
-            self.spec_tag1, self.spec_tag2, self.spec_tag3, self.spec_tag4 = None, None, None, None
-        if "scheme" in config.__dict__:
-            self.scheme = config.scheme
-        else:
-            self.scheme = 0
-        if "num_labels" in config.__dict__:
-            self.num_labels = config.num_labels
-        else:
-            self.num_labels = 2
 
+        self.spec_tag1, self.spec_tag2, self.spec_tag3, self.spec_tag4 = config.tags
+        self.scheme = config.scheme
+        self.num_labels = config.num_labels
         self.loss_fct = CrossEntropyLoss()
+
         if self.scheme == 1:
-            rate = 3
+            self.classifier_dim = config.hidden_size * 3
         elif self.scheme == 2:
-            rate = 5
+            self.classifier_dim = config.hidden_size * 5
         else:
-            rate = 1
-        self.classifier = nn.Linear(config.hidden_size * rate, config.num_labels)
+            self.classifier_dim = config.hidden_size
+
+        self.base_classifier = nn.Linear(self.classifier_dim, self.num_labels)
 
     @staticmethod
     def special_tag_representation(seq_output, input_ids, special_tag):
         spec_idx = (input_ids == special_tag).nonzero(as_tuple=False)
+
         temp = []
         for idx in spec_idx:
             temp.append(seq_output[idx[0], idx[1], :])
-        return torch.stack(temp, dim=0)
+        tags_rep = torch.stack(temp, dim=0)
+
+        return tags_rep
 
     def output2logits(self, pooled_output, seq_output, input_ids):
         if self.scheme == 1:
             seq_tags = []
-            for each_tag in [self.spec_tag1, self.spec_tag2]:
+            for each_tag in [self.spec_tag1, self.spec_tag3]:
                 seq_tags.append(self.special_tag_representation(seq_output, input_ids, each_tag))
             new_pooled_output = torch.cat((pooled_output, *seq_tags), dim=1)
         elif self.scheme == 2:
@@ -56,7 +56,8 @@ class BaseModel(PreTrainedModel):
             new_pooled_output = torch.cat((pooled_output, *seq_tags), dim=1)
         else:
             new_pooled_output = pooled_output
-        logits = self.classifier(new_pooled_output)
+
+        logits = self.base_classifier(new_pooled_output)
 
         return logits
 
@@ -208,9 +209,6 @@ class XLNetForRelationIdentification(XLNetForSequenceClassification, BaseModel):
         self.xlnet = XLNetModel(config)
         self.sequence_summary = SequenceSummary(config)
         self.dropout = nn.Dropout(config.dropout)
-        self.classifier1 = nn.Linear(config.d_model, config.num_labels)
-        self.classifier2 = nn.Linear(config.d_model * 3, config.num_labels)
-        self.classifier3 = nn.Linear(config.d_model * 5, config.num_labels)
         self.init_weights()
 
     def forward(self,

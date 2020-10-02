@@ -27,7 +27,7 @@ def app(gargs):
     task_runner = TaskRunner(gargs)
     if gargs.do_train:
         if Path(gargs.new_model_dir).exists() and not gargs.overwrite_model_dir:
-            raise RuntimeError("{gargs.new_model_dir} is exist and overwrite this dir is not permitted.")
+            raise RuntimeError("{} is exist and overwrite this dir is not permitted.".format(gargs.new_model_dir))
 
         # training
         task_runner.train()
@@ -119,7 +119,6 @@ if __name__ == '__main__':
                         help="For fp16: Apex AMP optimization level selected in ['O0', 'O1', 'O2', and 'O3']."
                              "See details at https://nvidia.github.io/apex/amp.html")
 
-    # TODO: distributed parallel training on multiple GPU
     args = parser.parse_args()
 
     # other setup

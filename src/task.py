@@ -9,24 +9,13 @@ from data_utils import (features2tensors, relation_extraction_data_loader,
                         RelationDataFormatUniProcessor, acc_and_f1)
 from data_processing.io_utils import pkl_save, pkl_load
 from transformers import glue_convert_examples_to_features as convert_examples_to_relation_extraction_features
+from transformers import get_linear_schedule_with_warmup, get_cosine_schedule_with_warmup
 import torch
 from tqdm import trange, tqdm
 import numpy as np
 from packaging import version
 from pathlib import Path
 from config import SPEC_TAGS, MODEL_DICT
-
-
-def get_linear_schedule_with_warmup(optimizer, num_warmup_steps, num_training_steps, last_epoch=-1):
-
-    def lr_lambda(current_step: int):
-        if current_step < num_warmup_steps:
-            return float(current_step) / float(max(1, num_warmup_steps))
-        return max(
-            0.0, float(num_training_steps - current_step) / float(max(1, num_training_steps - num_warmup_steps))
-        )
-
-    return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda, last_epoch)
 
 
 class TaskRunner(object):
