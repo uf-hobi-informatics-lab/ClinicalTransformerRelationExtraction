@@ -19,15 +19,42 @@ Our training strategy is inspired by the paper: https://arxiv.org/abs/1906.03158
 > We will keep adding new models.
 
 ## usage and example
-We require the data must have original raw text and entities. 
-We will generate candidate relations as entity pairs. 
-We will use brat annotation format as default.
+- data format
+> see sample_data dir (train.tsv and test.tsv) for the train and test data format
 
-- preprocess data
+> The sample data is a small subset of the data prepared from the 2018 umass made1.0 challenge corpus
 
-- training (use 5-CV for hyperparameter optimization)
+```
+# data format: tsv file with 8 columns:
+1. relation_type: adverse
+2. sentence_1: ALLERGIES : [s1] Penicillin [e1] .
+3. sentence_2: [s2] ALLERGIES [e2] : Penicillin .
+4. entity_type_1: Drug
+5. entity_type_2: ADE
+6. entity_id_1: T1
+7. entity_id2: T2
+8. file_id: 13_10
+```
+
+- preprocess data (see the preprocess.py script for more details on usage)
+```shell script
+
+```
+
+- training
+```shell script
+
+```
 
 - prediction
+```shell script
+
+```
+
+- post-processing (to brat format)
+```shell script
+
+```
 
 ## Issues
 raise an issue if you have problems. 

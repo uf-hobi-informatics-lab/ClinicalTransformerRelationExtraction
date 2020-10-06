@@ -161,6 +161,11 @@ if __name__ == '__main__':
         in the program:
             args.test_data_file = ['tf1.txt', 'tf2.txt']
             args.predict_result_file = ['res1.txt', 'res2.txt']
+            
+        if use bin model, you need a map file to map positive relation to its relation type.
+        We use entity type pair as key to conduct this mapping
+        example:
+            (ADE, Drug): Drug-ADE
     """
     parser.add_argument("--mode", type=str, default='mul', required=True, 
                         help="we have two mode for binary (bin) and multiple (mul) classes classification")

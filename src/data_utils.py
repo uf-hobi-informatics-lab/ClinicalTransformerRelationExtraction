@@ -255,11 +255,6 @@ class RelationDataFormatSepProcessor(DataProcessor):
             4. pick the longest distance from (1, 2), if 1 remove first token, if 2 remove last token
             5. repeat until len is equal to max_seq_len
         """
-        # ### the procedure here should be done in preprocessing ####
-        text_a = re.sub("\[ \* \*|\* \* \]", "", text_a)
-        text_b = re.sub("\[ \* \*|\* \* \]", "", text_b)
-        # ###########################################################
-
         while len(self.tokenizer.tokenize(text_a) + self.tokenizer.tokenize(text_b)) > (self.max_seq_len-3):
             w1 = text_a.split(" ")
             w2 = text_b.split(" ")
@@ -324,10 +319,6 @@ class RelationDataFormatUniProcessor(DataProcessor):
         """
             see RelationDataFormatSepProcessor._process_seq_len for details
         """
-        # ### the procedure here should be done in preprocessing ####
-        text_a = re.sub("\[ \* \*|\* \* \]", "", text_a)
-        # ###########################################################
-
         while len(self.tokenizer.tokenize(text_a)) > (self.max_seq_len-2):
             w1 = text_a.split(" ")
             t1, t2 = [idx for (idx, w) in enumerate(w1) if w.lower() in SPEC_TAGS]
