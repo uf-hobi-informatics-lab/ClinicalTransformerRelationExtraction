@@ -45,17 +45,85 @@ Our training strategy is inspired by the paper: https://arxiv.org/abs/1906.03158
 
 - training
 ```shell script
+export CUDA_VISIBLE_DEVICES=1
+data_dir=./sample_data
+nmd=./new_model
+pof=./predictions.txt
+log=./log.txt
 
+python ./src/relation_extraction.py \
+		--model_type bert \
+		--data_format_mode 0 \
+		--classification_scheme 2 \
+		--pretrained_model bert-base-uncased \
+		--data_dir $data_dir \
+		--new_model_dir $nmd \
+		--predict_output_file $pof \
+		--overwrite_model_dir \
+		--seed 13 \
+		--max_seq_length 256 \
+		--cache_data \
+		--do_train \
+		--do_predict \
+		--do_lower_case \
+		--train_batch_size 4 \
+		--eval_batch_size 4 \
+		--learning_rate 1e-5 \
+		--num_train_epochs 3 \
+		--gradient_accumulation_steps 1 \
+		--do_warmup \
+		--warmup_ratio 0.1 \
+		--weight_decay 0 \
+		--max_num_checkpoints 1 \
+		--log_file $log \
 ```
 
 - prediction
 ```shell script
+export CUDA_VISIBLE_DEVICES=1
+data_dir=./sample_data
+nmd=./new_model
+pof=./predictions.txt
+log=./log.txt
 
+python ./src/relation_extraction.py \
+		--model_type bert \
+		--data_format_mode 0 \
+		--classification_scheme 2 \
+		--pretrained_model bert-base-uncased \
+		--data_dir $data_dir \
+		--new_model_dir $nmd \
+		--predict_output_file $pof \
+		--overwrite_model_dir \
+		--seed 13 \
+		--max_seq_length 256 \
+		--cache_data \
+		--do_predict \
+		--do_lower_case \
+		--train_batch_size 4 \
+		--eval_batch_size 4 \
+		--learning_rate 1e-5 \
+		--num_train_epochs 3 \
+		--gradient_accumulation_steps 1 \
+		--do_warmup \
+		--warmup_ratio 0.1 \
+		--weight_decay 0 \
+		--max_num_checkpoints 1 \
+		--log_file $log \
 ```
 
 - post-processing (to brat format)
 ```shell script
+# see --help for more information
+data_dir=./sample_data
+pof=./predictions.txt
 
+python src/data_processing/post_processing.py \
+		--mode mul \
+		--predict_result_file $pof \
+		--entity_data_dir ./test_data_entity_only \
+		--test_data_file ${data_dir}/test.tsv \
+		--brat_result_output_dir ./brat_output
 ```
 
 ## Issues
