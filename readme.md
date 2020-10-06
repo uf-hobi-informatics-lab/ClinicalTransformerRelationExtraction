@@ -36,10 +36,12 @@ Our training strategy is inspired by the paper: https://arxiv.org/abs/1906.03158
 8. file_id: 13_10
 ```
 
-- preprocess data (see the preprocess.py script for more details on usage)
-```shell script
+- preprocess data (see the preprocess.ipynb script for more details on usage)
+> we did not provide a script for training and test data generation
 
-```
+> we have a jupyter notebook with preprocessing 2018 n2c2 data as an example
+
+> you can follow our example to generate your own dataset
 
 - training
 ```shell script

@@ -2,6 +2,6 @@
 .idea
 __pycache__
 /data/
-/notebook/.ipynb_checkpoints/
+.ipynb_checkpoints/
 /notebook/
 /test/
