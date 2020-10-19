@@ -1,4 +1,4 @@
-#Clinical Relation Extration with Transformers
+# Clinical Relation Extration with Transformers
 
 ## Aim
 This package is developed for researchers easily to use state-of-the-art transformers models for extracting relations from clinical notes. 

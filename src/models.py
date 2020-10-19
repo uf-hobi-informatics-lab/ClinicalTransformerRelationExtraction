@@ -7,6 +7,7 @@ from transformers import (BertForSequenceClassification, BertModel,
                           XLNetForSequenceClassification, XLNetModel,
                           RobertaForSequenceClassification, RobertaModel,
                           AlbertForSequenceClassification, AlbertModel,
+                          LongformerForSequenceClassification, LongformerModel,
                           PreTrainedModel)
 
 
@@ -249,6 +250,49 @@ class XLNetForRelationIdentification(XLNetForSequenceClassification, BaseModel):
         logits = self.output2logits(pooled_output, seq_output, input_ids)
 
         outputs = (logits,) + outputs[1:]
+
+        loss = self.loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+
+        outputs = (loss,) + outputs
+
+        return outputs
+
+
+class LongFormerForRelationIdentification(LongformerForSequenceClassification, BaseModel):
+    def __init__(self, config):
+        super().__init__(config)
+        self.longformer = LongformerModel(config)
+        self.init_weights()
+
+    def forward(self,
+                input_ids=None,
+                attention_mask=None,
+                global_attention_mask=None,
+                token_type_ids=None,
+                position_ids=None,
+                inputs_embeds=None,
+                labels=None,
+                output_attentions=None,
+                output_hidden_states=None,
+                **kwargs):
+
+        outputs = self.longformer(
+            input_ids,
+            attention_mask=attention_mask,
+            global_attention_mask=global_attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states
+        )
+
+        pooled_output = outputs[1]
+        seq_output = outputs[0]
+
+        logits = self.output2logits(pooled_output, seq_output, input_ids)
+
+        outputs = (logits,) + outputs[2:]
 
         loss = self.loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
 

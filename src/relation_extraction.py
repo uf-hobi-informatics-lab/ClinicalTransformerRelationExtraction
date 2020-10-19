@@ -111,6 +111,8 @@ if __name__ == '__main__':
                         help="where to save the log information")
     parser.add_argument("--log_lvl", default="i", type=str,
                         help="d=DEBUG; i=INFO; w=WARNING; e=ERROR")
+    parser.add_argument("--log_step", default=1000, type=int,
+                        help="logging after how many steps of training. If < 0, no log during training")
     parser.add_argument("--progress_bar", action='store_true',
                         help="show progress during the training in tqdm")
     parser.add_argument('--fp16', action='store_true',

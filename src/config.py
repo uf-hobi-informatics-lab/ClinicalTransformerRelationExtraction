@@ -1,7 +1,8 @@
-from transformers import (BertConfig, RobertaConfig, XLNetConfig, AlbertConfig,
-                          BertTokenizer, RobertaTokenizer, XLNetTokenizer, AlbertTokenizer)
+from transformers import (BertConfig, RobertaConfig, XLNetConfig, AlbertConfig, LongformerConfig,
+                          BertTokenizer, RobertaTokenizer, XLNetTokenizer, AlbertTokenizer, LongformerTokenizer)
 from models import (BertForRelationIdentification, RoBERTaForRelationIdentification,
-                    XLNetForRelationIdentification, AlbertForRelationIdentification)
+                    XLNetForRelationIdentification, AlbertForRelationIdentification,
+                    LongFormerForRelationIdentification)
 
 
 EN1_START = "[s1]"
@@ -14,5 +15,6 @@ MODEL_DICT = {
     "bert": (BertForRelationIdentification, BertConfig, BertTokenizer),
     "roberta": (RoBERTaForRelationIdentification, RobertaConfig, RobertaTokenizer),
     "xlnet": (XLNetForRelationIdentification, XLNetConfig, XLNetTokenizer),
-    "albert": (AlbertForRelationIdentification, AlbertConfig, AlbertTokenizer)
+    "albert": (AlbertForRelationIdentification, AlbertConfig, AlbertTokenizer),
+    "longformer": (LongFormerForRelationIdentification, LongformerConfig, LongformerTokenizer)
 }

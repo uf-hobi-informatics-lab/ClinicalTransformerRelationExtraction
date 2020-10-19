@@ -114,9 +114,11 @@ class TaskRunner(object):
                         self.optimizer.step()
                     if self.args.do_warmup:
                         self.scheduler.step()
-                    # batch_iter.set_postfix({"sloss": loss.item(), "tloss": tr_loss/step})
-                if (step+1) % 500 == 0:
-                    self.args.logger.info("total loss: {}; average loss: {}".format(tr_loss, tr_loss/t_step))
+                    # batch_iter.set_postfix({"loss": loss.item(), "tloss": tr_loss/step})
+                if self.args.log_step > 0 and (step+1) % self.args.log_step == 0:
+                    self.args.logger.info(
+                        "epoch: {}; global step: {}; total loss: {}; average loss: {}".format(
+                            epoch, t_step, tr_loss, tr_loss/t_step))
 
                 t_step += 1
 
