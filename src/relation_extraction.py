@@ -8,10 +8,10 @@ from pathlib import Path
 from data_processing.io_utils import save_text
 
 
-def set_seed(args):
-    random.seed(args.seed)
-    np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
+def set_seed(gargs):
+    random.seed(gargs.seed)
+    np.random.seed(gargs.seed)
+    torch.manual_seed(gargs.seed)
 
 
 def app(gargs):

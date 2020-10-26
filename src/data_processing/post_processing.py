@@ -171,11 +171,11 @@ if __name__ == '__main__':
                         help="we have two mode for binary (bin) and multiple (mul) classes classification")
     parser.add_argument("--type_map", type=str, default=None,
                         help="a map of entity pair types to relation types (only use when mode is bin)")
-    parser.add_argument("--test_data_file", type=str, action='append', required=True,
+    parser.add_argument("--test_data_file", type=str, nargs='+', required=True,
                         help="The test data file in which we need to read the maps; available to accept multiple files")
     parser.add_argument("--entity_data_dir", type=str, required=True,
                         help="The annotation files with all the entities")
-    parser.add_argument("--predict_result_file", action='append', type=str, required=True,
+    parser.add_argument("--predict_result_file", nargs='+', type=str, required=True,
                         help="prediction results; available to accept multiple files")
     parser.add_argument("--brat_result_output_dir", type=str, required=True,
                         help="prediction results")

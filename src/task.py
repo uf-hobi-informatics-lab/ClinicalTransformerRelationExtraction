@@ -67,9 +67,9 @@ class TaskRunner(object):
         tr_loss = .0
         t_step = 0
 
-        epoch_iter = trange(self.args.num_train_epochs, desc="Epoch", disable=self.args.progress_bar)
+        epoch_iter = trange(self.args.num_train_epochs, desc="Epoch", disable=not self.args.progress_bar)
         for epoch in epoch_iter:
-            batch_iter = tqdm(self.train_data_loader, desc="Batch", disable=self.args.progress_bar)
+            batch_iter = tqdm(self.train_data_loader, desc="Batch", disable=not self.args.progress_bar)
             batch_total_step = len(self.train_data_loader)
             for step, batch in enumerate(batch_iter):
                 self.model.train()
@@ -251,7 +251,7 @@ class TaskRunner(object):
         self.model.eval()
 
         # create dev data batch iteration
-        batch_iter = tqdm(data_loader, desc="Batch", disable=self.args.progress_bar)
+        batch_iter = tqdm(data_loader, desc="Batch", disable=not self.args.progress_bar)
         total_sample_num = len(batch_iter)
         preds = None
 
