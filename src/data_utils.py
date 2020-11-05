@@ -6,6 +6,7 @@ from pathlib import Path
 import torch
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, TensorDataset
 import re
+from transformers import RobertaTokenizer, LongformerTokenizer
 
 
 def try_catch_annotator(func):
@@ -69,7 +70,6 @@ def convert_examples_to_relation_extraction_features(
         inputs = tokenizer.encode_plus(
             tokens_a, tokens_b, pad_to_max_length=True, max_length=max_length, truncation=False)
 
-        # Truncate tokens
         label = label2idx[example.label]
         feature = InputFeatures(**inputs, label=label)
         features.append(feature)
@@ -220,12 +220,18 @@ class DataProcessor(object):
 class RelationDataFormatSepProcessor(DataProcessor):
     """
         data format:
-            [CLS] sent1 [SEP] sent2 [SEP]
+            [CLS] sent1 [SEP] sent2 [SEP] : BERT
+            <s> sent1 </s> </s> sent2 </s> : RoBERTa, LongFormer
+            sent1 <sep> sent2 <sep> <cls>
     """
 
     def _create_examples(self, lines, set_type):
         """Creates examples for the training and dev sets."""
         examples = []
+        if isinstance(self.tokenizer, RobertaTokenizer) or isinstance(self.tokenizer, LongformerTokenizer):
+            tst = 4
+        else:
+            tst = 3
 
         for (i, line) in enumerate(lines):
             if i == 0:
@@ -238,14 +244,14 @@ class RelationDataFormatSepProcessor(DataProcessor):
             # 1. skip all these cases
             # 2. use truncate strategy
             # we adopt truncate way (2) in this implementation as _process_seq_len
-            text_a, text_b = self._process_seq_len(text_a, text_b)
+            text_a, text_b = self._process_seq_len(text_a, text_b, total_special_toks=tst)
 
             examples.append(
                 InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
 
         return examples
 
-    def _process_seq_len(self, text_a, text_b):
+    def _process_seq_len(self, text_a, text_b, total_special_toks=3):
         """
             This function is used to truncate sequences with len > max_seq_len
             Truncate strategy:
@@ -255,7 +261,9 @@ class RelationDataFormatSepProcessor(DataProcessor):
             4. pick the longest distance from (1, 2), if 1 remove first token, if 2 remove last token
             5. repeat until len is equal to max_seq_len
         """
-        while len(self.tokenizer.tokenize(text_a) + self.tokenizer.tokenize(text_b)) > (self.max_seq_len-3):
+        while len(self.tokenizer.tokenize(text_a) + self.tokenizer.tokenize(text_b)) \
+                > (self.max_seq_len - total_special_toks):
+
             w1 = text_a.split(" ")
             w2 = text_b.split(" ")
 
@@ -267,14 +275,13 @@ class RelationDataFormatSepProcessor(DataProcessor):
 
             a1 = t1 - ss1
             b1 = se1 - t2
+            a2 = t3 - ss2
+            b2 = se2 - t4
 
             if a1 > b1:
                 w1.pop(0)
             else:
                 w1.pop(-1)
-
-            a2 = t3 - ss2
-            b2 = se2 - t4
 
             if a2 > b2:
                 w2.pop(0)
@@ -321,16 +328,22 @@ class RelationDataFormatUniProcessor(DataProcessor):
         """
         while len(self.tokenizer.tokenize(text_a)) > (self.max_seq_len-2):
             w1 = text_a.split(" ")
-            t1, t2 = [idx for (idx, w) in enumerate(w1) if w.lower() in SPEC_TAGS]
-            ss1, se1 = 0, len(w1)
+            t1, t2, t3, t4 = [idx for (idx, w) in enumerate(w1) if w.lower() in SPEC_TAGS]
+            ss1, mid1, se1 = 0, (len(w1) - 1) // 2, len(w1) - 1
 
             a1 = t1 - ss1
-            b1 = se1 - t2
-
-            if a1 > b1:
+            b1 = se1 - t4
+            c1 = mid1 - t2
+            d1 = t3 - mid1
+            m_idx = max(a1, b1, c1, d1)
+            if a1 == m_idx:
                 w1.pop(0)
-            else:
+            elif b1 == m_idx:
                 w1.pop(-1)
+            elif c1 == m_idx:
+                w1.pop((t2 + c1 // 2))
+            else:
+                w1.pop((t3 - d1 // 2))
 
             text_a = " ".join(w1)
 

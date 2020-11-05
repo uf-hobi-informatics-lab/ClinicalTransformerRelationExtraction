@@ -6,6 +6,7 @@ from utils import TransformerLogger
 from task import TaskRunner
 from pathlib import Path
 from data_processing.io_utils import save_text
+import traceback
 
 
 def set_seed(gargs):
@@ -30,11 +31,20 @@ def app(gargs):
             raise RuntimeError("{} is exist and overwrite this dir is not permitted.".format(gargs.new_model_dir))
 
         # training
-        task_runner.train()
+        try:
+            task_runner.train()
+        except:
+            gargs.logger.error("Training error:\n{}".format(traceback.format_exc()))
+            raise RuntimeError(traceback.format_exc())
 
         if gargs.do_eval:
             # eval on dev
-            eval_res = task_runner.eval()
+            try:
+                eval_res = task_runner.eval()
+            except:
+                gargs.logger.error("Evaluation error:\n{}".format(traceback.format_exc()))
+                raise RuntimeError(traceback.format_exc())
+
             gargs.logger.info("eval performance:\n{}".format(eval_res))
             eval_output = ""
             for k, v in eval_res.items():
@@ -43,7 +53,12 @@ def app(gargs):
 
     if gargs.do_predict:
         # run prediction
-        preds = task_runner.predict()
+        try:
+            preds = task_runner.predict()
+        except:
+            gargs.logger.error("Prediction error:\n{}".format(traceback.format_exc()))
+            raise RuntimeError(traceback.format_exc())
+
         pred_res = "\n".join([str(pred) for pred in preds])
 
         # predict_output_file must be a file, we will create parent dir automatically

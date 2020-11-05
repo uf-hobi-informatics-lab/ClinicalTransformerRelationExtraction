@@ -121,7 +121,6 @@ class TaskRunner(object):
                             epoch, t_step, tr_loss, tr_loss/t_step))
 
                 t_step += 1
-
             batch_iter.close()
         epoch_iter.close()
 

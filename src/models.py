@@ -134,7 +134,7 @@ class RoBERTaForRelationIdentification(RobertaForSequenceClassification, BaseMod
             token_type_ids=token_type_ids,
             position_ids=position_ids,
             head_mask=head_mask,
-            utput_attentions=output_attentions,
+            output_attentions=output_attentions,
             output_hidden_states=output_hidden_states
         )
 
