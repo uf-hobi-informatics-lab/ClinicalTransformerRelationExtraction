@@ -35,7 +35,8 @@ def app(gargs):
             task_runner.train()
         except:
             gargs.logger.error("Training error:\n{}".format(traceback.format_exc()))
-            raise RuntimeError(traceback.format_exc())
+            traceback.print_exc()
+            raise RuntimeError()
 
         if gargs.do_eval:
             # eval on dev

@@ -10,6 +10,7 @@ from transformers import RobertaTokenizer, LongformerTokenizer
 from tqdm import tqdm
 from functools import partial
 from concurrent.futures import ProcessPoolExecutor
+import numpy as np
 
 
 def try_catch_annotator(func):
@@ -44,6 +45,12 @@ class InputExample(object):
         self.text_b = text_b
         self.label = label
 
+    def __str__(self):
+        s = ""
+        for k, v in self.__dict__.items():
+            s += "{}={}\n".format(k, v)
+        return s
+
 
 class InputFeatures(object):
     """A single set of features of data."""
@@ -53,6 +60,12 @@ class InputFeatures(object):
         self.attention_mask = attention_mask
         self.token_type_ids = token_type_ids
         self.label = label
+
+    def __str__(self):
+        s = ""
+        for k, v in self.__dict__.items():
+            s += "{}={}\n".format(k, v)
+        return s
 
 
 def convert_examples_to_relation_extraction_features(
@@ -238,18 +251,22 @@ class RelationDataFormatSepProcessor(DataProcessor):
             <s> sent1 </s> </s> sent2 </s> : RoBERTa, LongFormer
             sent1 <sep> sent2 <sep> <cls>
     """
-    def _create_examples_helper(self, line_idx, set_type, tst):
-        i, line = line_idx
-        guid = "%s-%s" % (set_type, i+1)
-        text_a = line[1]
-        text_b = line[2]
-        label = line[0]
-        # text after tokenization has a len > max_seq_len:
-        # 1. skip all these cases
-        # 2. use truncate strategy
-        # we adopt truncate way (2) in this implementation as _process_seq_len
-        text_a, text_b = self._process_seq_len(text_a, text_b, total_special_toks=tst)
-        return InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label)
+    def _create_examples_helper(self, lines_idx, set_type, tst):
+        start_idx, lines = lines_idx
+        examples = []
+        for (i, line) in enumerate(tqdm(lines)):
+            guid = "{}_{}_{}".format(set_type, start_idx, i)
+            text_a = line[1]
+            text_b = line[2]
+            label = line[0]
+            # text after tokenization has a len > max_seq_len:
+            # 1. skip all these cases
+            # 2. use truncate strategy
+            # we adopt truncate way (2) in this implementation as _process_seq_len
+            text_a, text_b = self._process_seq_len(text_a, text_b, total_special_toks=tst)
+            examples.append(
+                InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
+        return examples
 
     def _create_examples(self, lines, set_type):
         """Creates examples for the training and dev sets."""
@@ -261,29 +278,17 @@ class RelationDataFormatSepProcessor(DataProcessor):
 
         if self.num_core < 2:
             # single process - maybe too slow - replace with multiprocess
-            examples = []
-            for (i, line) in enumerate(tqdm(lines)):
-                guid = "%s-%s" % (set_type, i)
-                text_a = line[1]
-                text_b = line[2]
-                label = line[0]
-                # text after tokenization has a len > max_seq_len:
-                # 1. skip all these cases
-                # 2. use truncate strategy
-                # we adopt truncate way (2) in this implementation as _process_seq_len
-                text_a, text_b = self._process_seq_len(text_a, text_b, total_special_toks=tst)
-                examples.append(
-                    InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
+            examples = self._create_examples_helper((0, lines), set_type, tst)
         else:
             # multi-process - assume the first read-in data is the csv title with no data information
             # use multi-cores to process data if you have many long sentences;
             # otherwise single process should be faster
+            examples = []
+            array_lines = np.array_split(lines, self.num_core)
             with ProcessPoolExecutor(max_workers=self.num_core) as exe:
-                examples =[each for each in tqdm(
-                    exe.map(
-                        partial(self._create_examples_helper, set_type=set_type, tst=tst), enumerate(lines)
-                    ), total=len(lines[1:])
-                )]
+                for each in exe.map(partial(self._create_examples_helper, set_type=set_type, tst=tst),
+                                    enumerate(array_lines)):
+                    examples.extend(each)
 
         return examples
 
@@ -336,18 +341,24 @@ class RelationDataFormatUniProcessor(DataProcessor):
             [CLS] sent1 sent2 [SEP]
     """
 
-    def _create_examples_helper(self, line_idx, set_type, tst):
-        i, line = line_idx
-        guid = "%s-%s" % (set_type, i)
-        text_a = line[1]
-        text_a_1 = line[2]
-        text_a = " ".join([text_a, text_a_1])
-        label = line[0]
-        # text after tokenization has a len > max_seq_len:
-        # 1. skip all these cases
-        # 2. use truncate strategy (truncate from both side) (adopted)
-        text_a = self._process_seq_len(text_a)
-        return InputExample(guid=guid, text_a=text_a, text_b=None, label=label)
+    def _create_examples_helper(self, lines_idx, set_type, tst):
+        examples = []
+        start_idx, lines = lines_idx
+        for (i, line) in enumerate(lines):
+            guid = "%s-%s-%s" % (set_type, start_idx, i)
+            text_a = line[1]
+            text_a_1 = line[2]
+            text_a = " ".join([text_a, text_a_1])
+            label = line[0]
+            # text after tokenization has a len > max_seq_len:
+            # 1. skip all these cases
+            # 2. use truncate strategy (truncate from both side) (adopted)
+            text_a = self._process_seq_len(text_a)
+
+            examples.append(
+                InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+
+        return examples
 
     def _create_examples(self, lines, set_type):
         """Creates examples for the training and dev sets."""
@@ -359,28 +370,15 @@ class RelationDataFormatUniProcessor(DataProcessor):
 
         if self.num_core < 2:
             # single process
-            examples = []
-            for (i, line) in enumerate(lines):
-                guid = "%s-%s" % (set_type, i)
-                text_a = line[1]
-                text_a_1 = line[2]
-                text_a = " ".join([text_a, text_a_1])
-                label = line[0]
-                # text after tokenization has a len > max_seq_len:
-                # 1. skip all these cases
-                # 2. use truncate strategy (truncate from both side) (adopted)
-                text_a = self._process_seq_len(text_a)
-
-                examples.append(
-                    InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+            examples = self._create_examples_helper((0, lines), set_type, tst)
         else:
             # multi-process
+            examples = []
+            array_lines = np.array_split(lines, self.num_core)
             with ProcessPoolExecutor(max_workers=self.num_core) as exe:
-                examples =[each for each in tqdm(
-                    exe.map(
-                        partial(self._create_examples_helper, set_type=set_type, tst=tst), enumerate(lines)
-                    ), total=len(lines[1:])
-                )]
+                for each in exe.map(partial(self._create_examples_helper, set_type=set_type, tst=tst),
+                                    enumerate(array_lines)):
+                    examples.extend(each)
 
         return examples
 
