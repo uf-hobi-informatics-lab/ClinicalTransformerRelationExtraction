@@ -28,14 +28,17 @@ class TaskRunner(object):
 
         # set up data processor
         if self.args.data_format_mode == 0:
-            self.data_processor = RelationDataFormatSepProcessor(max_seq_len=self.args.max_seq_length)
+            self.data_processor = RelationDataFormatSepProcessor(
+                max_seq_len=self.args.max_seq_length, num_core=self.args.num_core)
         elif self.args.data_format_mode == 1:
-            self.data_processor = RelationDataFormatUniProcessor(max_seq_len=self.args.max_seq_length)
+            self.data_processor = RelationDataFormatUniProcessor(
+                max_seq_len=self.args.max_seq_length, num_core=self.args.num_core)
         else:
             raise NotImplementedError("Only support 0, 1 but get data_format_mode as {}"
                                       .format(self.args.data_format_mode))
 
         self.data_processor.set_data_dir(self.args.data_dir)
+        self.data_processor.set_header(self.args.data_file_header)
 
         # init or reload model
         if self.args.do_train:
@@ -279,9 +282,12 @@ class TaskRunner(object):
                 train_examples = pkl_load(cached_examples_file)
                 self.args.logger.info("load training data from cached file: {}".format(cached_examples_file))
             elif self.args.cache_data and not cached_examples_file.exists():
+                self.args.logger.info(
+                    "create training examples...and will cache the processed data at {}".format(cached_examples_file))
                 train_examples = self.data_processor.get_train_examples()
                 pkl_save(train_examples, cached_examples_file)
             else:
+                self.args.logger.info("create training examples...the processed data will not be cached")
                 train_examples = self.data_processor.get_train_examples()
 
             # convert examples to tensor
@@ -303,9 +309,12 @@ class TaskRunner(object):
             if self.args.cache_data and cached_examples_file.exists():
                 dev_examples = pkl_load(cached_examples_file)
             elif self.args.cache_data and not cached_examples_file.exists():
+                self.args.logger.info(
+                    "create dev examples...and will cache the processed data at {}".format(cached_examples_file))
                 dev_examples = self.data_processor.get_dev_examples()
                 pkl_save(dev_examples, cached_examples_file)
             else:
+                self.args.logger.info("create dev examples...the processed data will not be cached")
                 dev_examples = self.data_processor.get_dev_examples()
 
             # example2feature
@@ -329,9 +338,12 @@ class TaskRunner(object):
                 self.args.logger.info("load test data from cached file: {}".format(cached_examples_file))
                 test_examples = pkl_load(cached_examples_file)
             elif self.args.cache_data and not cached_examples_file.exists():
+                self.args.logger.info(
+                    "create evaluation examples...and will cache the processed data at {}".format(cached_examples_file))
                 test_examples = self.data_processor.get_test_examples()
                 pkl_save(test_examples, cached_examples_file)
             else:
+                self.args.logger.info("create evaluation examples...the processed data will not be cached")
                 test_examples = self.data_processor.get_test_examples()
 
             # example2feature

@@ -92,6 +92,9 @@ if __name__ == '__main__':
                         help="maximum number of tokens allowed in each sentence")
     parser.add_argument("--cache_data", action='store_true',
                         help="Whether to cache the features after tokenization (save training initialization time)")
+    parser.add_argument("--data_file_header", default=True, type=bool,
+                        help="flag used to define whether the data tsv file has header or not. "
+                             "If has header, we will skip the first line")
     parser.add_argument("--do_train", action='store_true',
                         help="Whether to run training.")
     parser.add_argument("--do_eval", action='store_true',
@@ -128,6 +131,8 @@ if __name__ == '__main__':
                         help="d=DEBUG; i=INFO; w=WARNING; e=ERROR")
     parser.add_argument("--log_step", default=1000, type=int,
                         help="logging after how many steps of training. If < 0, no log during training")
+    parser.add_argument("--num_core", default=-1, type=int,
+                        help="how many cores used for multiple process for data generation")
     parser.add_argument("--progress_bar", action='store_true',
                         help="show progress during the training in tqdm")
     parser.add_argument('--fp16', action='store_true',
