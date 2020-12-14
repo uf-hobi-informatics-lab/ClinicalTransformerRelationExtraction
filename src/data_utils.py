@@ -6,7 +6,6 @@ from pathlib import Path
 import torch
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, TensorDataset
 import re
-from transformers import RobertaTokenizer, LongformerTokenizer
 from tqdm import tqdm
 from functools import partial
 from concurrent.futures import ProcessPoolExecutor
@@ -161,7 +160,7 @@ def batch_to_model_input(batch, model_type="bert", device=torch.device("cpu")):
 class DataProcessor(object):
     """Base class for data converters for sequence classification data sets."""
 
-    def __init__(self, data_dir=None, max_seq_len=128, num_core=-1, header=True):
+    def __init__(self, data_dir=None, max_seq_len=128, num_core=-1, header=True, tokenizer_type='bert'):
         if data_dir:
             self.data_dir = Path(data_dir)
         else:
@@ -171,12 +170,16 @@ class DataProcessor(object):
         self.max_seq_len = max_seq_len
         self.num_core = num_core
         self.header = header
+        self.tokenizer_type = tokenizer_type
 
     def set_data_dir(self, data_dir):
         self.data_dir = Path(data_dir)
 
     def set_tokenizer(self, tokenizer):
         self.tokenizer = tokenizer
+
+    def set_tokenizer_type(self, tokenizer_type):
+        self.tokenizer_type = tokenizer_type
 
     def set_num_core(self, num_core):
         self.num_core = num_core
@@ -271,7 +274,7 @@ class RelationDataFormatSepProcessor(DataProcessor):
     def _create_examples(self, lines, set_type):
         """Creates examples for the training and dev sets."""
 
-        if isinstance(self.tokenizer, RobertaTokenizer) or isinstance(self.tokenizer, LongformerTokenizer):
+        if self.tokenizer_type in {'roberta', 'longformer'}:
             tst = 4
         else:
             tst = 3
@@ -363,7 +366,7 @@ class RelationDataFormatUniProcessor(DataProcessor):
     def _create_examples(self, lines, set_type):
         """Creates examples for the training and dev sets."""
 
-        if isinstance(self.tokenizer, RobertaTokenizer) or isinstance(self.tokenizer, LongformerTokenizer):
+        if self.tokenizer_type in {'roberta', 'longformer'}:
             tst = 4
         else:
             tst = 3

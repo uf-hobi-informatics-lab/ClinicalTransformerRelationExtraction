@@ -56,6 +56,7 @@ class TaskRunner(object):
         self.test_data_loader = None
 
         self.data_processor.set_tokenizer(self.tokenizer)
+        self.data_processor.set_tokenizer_type(self.args.model_type)
         self._load_data()
 
         if self.args.do_train:
@@ -152,6 +153,8 @@ class TaskRunner(object):
 
     def _init_new_model(self):
         """initialize a new model for fine-tuning"""
+        self.args.logger.info("Init new model...")
+
         model, config, tokenizer = self.model_dict[self.args.model_type]
 
         # init tokenizer and add special tags
@@ -159,6 +162,7 @@ class TaskRunner(object):
         last_token_idx = len(self.tokenizer)
         self.tokenizer.add_tokens(SPEC_TAGS)
         spec_token_new_ids = tuple([(last_token_idx + idx) for idx in range(len(self.tokenizer) - last_token_idx)])
+        total_token_num = len(self.tokenizer)
 
         # init config
         unique_labels, label2idx, idx2label = self.data_processor.get_labels()
@@ -166,16 +170,14 @@ class TaskRunner(object):
         num_labels = len(unique_labels)
         self.label2idx = label2idx
         self.idx2label = idx2label
-
-        self.config = config.from_pretrained(self.args.pretrained_model, num_labels=num_labels)
+        self.config = config.from_pretrained(self.args.pretrained_model,  mem_len=1024, num_labels=num_labels)
         self.config.tags = spec_token_new_ids
         self.config.scheme = self.args.classification_scheme
 
         # init model
         self.model = model.from_pretrained(self.args.pretrained_model, config=self.config)
-        total_token_num = len(self.tokenizer)
-        self.model.resize_token_embeddings(total_token_num)
         self.config.vocab_size = total_token_num
+        self.model.resize_token_embeddings(total_token_num)
 
         # load model to device
         self.model.to(self.args.device)

@@ -206,10 +206,8 @@ class AlbertForRelationIdentification(AlbertForSequenceClassification, BaseModel
 class XLNetForRelationIdentification(XLNetForSequenceClassification, BaseModel):
     def __init__(self, config):
         super().__init__(config)
-
-        self.xlnet = XLNetModel(config)
+        self.transformer = XLNetModel(config)
         self.sequence_summary = SequenceSummary(config)
-        self.dropout = nn.Dropout(config.dropout)
         self.init_weights()
 
     def forward(self,
@@ -222,13 +220,13 @@ class XLNetForRelationIdentification(XLNetForSequenceClassification, BaseModel):
                 input_mask=None,
                 head_mask=None,
                 inputs_embeds=None,
+                use_cache=True,
                 labels=None,
-                use_cache=None,
                 output_attentions=None,
                 output_hidden_states=None,
-                return_dict=None):
+                **kwargs):
 
-        outputs = self.xlnet(
+        outputs = self.transformer(
                 input_ids,
                 attention_mask=attention_mask,
                 mems=mems,
@@ -241,10 +239,9 @@ class XLNetForRelationIdentification(XLNetForSequenceClassification, BaseModel):
                 use_cache=use_cache,
                 output_attentions=output_attentions,
                 output_hidden_states=output_hidden_states,
-                return_dict=return_dict)
+                **kwargs)
 
         seq_output = outputs[0]
-        seq_output = self.dropout(seq_output)
         pooled_output = self.sequence_summary(seq_output)
 
         logits = self.output2logits(pooled_output, seq_output, input_ids)
