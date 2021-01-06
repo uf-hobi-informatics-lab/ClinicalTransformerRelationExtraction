@@ -170,7 +170,11 @@ class TaskRunner(object):
         num_labels = len(unique_labels)
         self.label2idx = label2idx
         self.idx2label = idx2label
-        self.config = config.from_pretrained(self.args.pretrained_model,  mem_len=1024, num_labels=num_labels)
+        self.config = config.from_pretrained(self.args.pretrained_model, num_labels=num_labels)
+        # The number of tokens to cache.
+        # he key/value pairs that have already been pre-computed in a previous forward pass won’t be re-computed.
+        if self.args.model_type == "xlnet":
+            self.config.mem_len = self.config.d_model
         self.config.tags = spec_token_new_ids
         self.config.scheme = self.args.classification_scheme
 
