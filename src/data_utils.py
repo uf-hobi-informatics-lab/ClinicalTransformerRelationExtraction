@@ -314,9 +314,10 @@ class RelationDataFormatSepProcessor(DataProcessor):
             t1, t2 = [idx for (idx, w) in enumerate(w1) if w.lower() in SPEC_TAGS]
             t3, t4 = [idx for (idx, w) in enumerate(w2) if w.lower() in SPEC_TAGS]
 
-            ss1, se1 = 0, len(w1)
-            ss2, se2 = 0, len(w2)
+            ss1, se1 = 0, len(w1)-1
+            ss2, se2 = 0, len(w2)-1
 
+            # assumption here is that entity len << sentence len
             a1 = t1 - ss1
             b1 = se1 - t2
             a2 = t3 - ss2
@@ -324,11 +325,17 @@ class RelationDataFormatSepProcessor(DataProcessor):
 
             if a1 > b1:
                 w1.pop(0)
+            elif a1 == b1 == 0:
+                # start and end are both special tags, we skip truncating
+                pass
             else:
                 w1.pop(-1)
 
             if a2 > b2:
                 w2.pop(0)
+            elif a2 == b2 == 0:
+                # start and end are both special tags, we skip truncating
+                pass
             else:
                 w2.pop(-1)
 
