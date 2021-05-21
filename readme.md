@@ -10,12 +10,13 @@ We have the requirement.txt to specify the packages required to run the project.
 
 ## Background
 Our training strategy is inspired by the paper: https://arxiv.org/abs/1906.03158
+We only support train-dev mode, but you can do 5-fold CV.
 
 ## Available models
 - BERT
 - XLNet
 - RoBERTa
-- ABERT
+- ALBERT
 > We will keep adding new models.
 
 ## usage and example
@@ -34,6 +35,10 @@ Our training strategy is inspired by the paper: https://arxiv.org/abs/1906.03158
 6. entity_id_1: T1
 7. entity_id2: T2
 8. file_id: 13_10
+
+note: 
+1) the entity between [s1][e1] is the first entity in a relation; the second entity in the relation is inbetween [s2][e2]
+2) even the two entities in the same sentenc, we still require to put them separately
 ```
 
 - preprocess data (see the preprocess.ipynb script for more details on usage)
@@ -64,7 +69,6 @@ python ./src/relation_extraction.py \
 		--max_seq_length 256 \
 		--cache_data \
 		--do_train \
-		--do_predict \
 		--do_lower_case \
 		--train_batch_size 4 \
 		--eval_batch_size 4 \

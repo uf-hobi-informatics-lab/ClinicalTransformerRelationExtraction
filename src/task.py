@@ -137,6 +137,7 @@ class TaskRunner(object):
         # this is done on dev
         true_labels = np.array([dev_fea.label for dev_fea in self.dev_features])
         preds, eval_loss = self._run_eval(self.dev_data_loader)
+        # TODO: add eval step to suppor train-dev mode
         eval_metric = acc_and_f1(labels=true_labels, preds=preds)
 
         return eval_metric

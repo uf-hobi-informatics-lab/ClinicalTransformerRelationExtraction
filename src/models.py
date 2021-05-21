@@ -28,6 +28,8 @@ class BaseModel(PreTrainedModel):
             self.classifier_dim = config.hidden_size * 3
         elif self.scheme == 2:
             self.classifier_dim = config.hidden_size * 5
+        elif self.scheme == 3:
+            self.classifier_dim = config.hidden_size * 2
         else:
             self.classifier_dim = config.hidden_size
 
@@ -55,6 +57,11 @@ class BaseModel(PreTrainedModel):
             for each_tag in [self.spec_tag1, self.spec_tag2, self.spec_tag3, self.spec_tag4]:
                 seq_tags.append(self.special_tag_representation(seq_output, input_ids, each_tag))
             new_pooled_output = torch.cat((pooled_output, *seq_tags), dim=1)
+        elif self.scheme == 3:
+            seq_tags = []
+            for each_tag in [self.spec_tag1, self.spec_tag3]:
+                seq_tags.append(self.special_tag_representation(seq_output, input_ids, each_tag))
+            new_pooled_output = torch.cat(seq_tags, dim=1)
         else:
             new_pooled_output = pooled_output
 

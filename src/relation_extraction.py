@@ -33,7 +33,7 @@ def app(gargs):
         # training
         try:
             task_runner.train()
-        except:
+        except Exception as ex:
             gargs.logger.error("Training error:\n{}".format(traceback.format_exc()))
             traceback.print_exc()
             raise RuntimeError()
@@ -42,7 +42,7 @@ def app(gargs):
             # eval on dev
             try:
                 eval_res = task_runner.eval()
-            except:
+            except Exception as ex:
                 gargs.logger.error("Evaluation error:\n{}".format(traceback.format_exc()))
                 raise RuntimeError(traceback.format_exc())
 
@@ -56,7 +56,7 @@ def app(gargs):
         # run prediction
         try:
             preds = task_runner.predict()
-        except:
+        except Exception as ex:
             gargs.logger.error("Prediction error:\n{}".format(traceback.format_exc()))
             raise RuntimeError(traceback.format_exc())
 
@@ -76,7 +76,8 @@ if __name__ == '__main__':
                         help="valid values: 0: sep mode - [CLS]S1[SEP]S2[SEP]; 1: uni mode - [CLS]S1S2[SEP]")
     parser.add_argument("--classification_scheme", default=0, type=int,
                         help="special tokens used for classification. "
-                             "Valid values: 0: [CLS]; 1: [CLS], [S1], [S2]; 2: [CLS], [S1], [S2], [E1], [E2]")
+                             "Valid values: "
+                             "0: [CLS]; 1: [CLS], [S1], [S2]; 2: [CLS], [S1], [S2], [E1], [E2]; 3: [S1], [S2]")
     parser.add_argument("--pretrained_model", type=str,
                         help="The pretrained model file or directory for fine tuning.")
     parser.add_argument("--data_dir", type=str, required=True,
