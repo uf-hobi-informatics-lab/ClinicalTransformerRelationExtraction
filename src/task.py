@@ -140,10 +140,9 @@ class TaskRunner(object):
                 {}
                 ******************************
                 """.format(epoch, a, res))
-
-            # TODO: save strategy?
         epoch_iter.close()
 
+        # TODO: save strategy? save each epoch? use max checkpoint number?
         self._save_model()
         self.args.logger.info("training finish and the trained model is saved.")
 

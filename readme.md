@@ -39,6 +39,9 @@ We only support train-dev mode, but you can do 5-fold CV.
 note: 
 1) the entity between [s1][e1] is the first entity in a relation; the second entity in the relation is inbetween [s2][e2]
 2) even the two entities in the same sentenc, we still require to put them separately
+3) in the test.tsv, you can set all labels to neg or no_relation or whatever, because we will not use the label anyway
+4) We recommend to evaluate the test performance in a separate process based on prediction. (see **post-processing**)
+5) We recommend using official evaluation scripts to do evaluation to make sure the results reported are reliable.
 ```
 
 - preprocess data (see the preprocess.ipynb script for more details on usage)
@@ -49,6 +52,9 @@ note:
 > you can follow our example to generate your own dataset
 
 - training
+> please refer to the wiki page for all details of the parameters
+> [Sites Using React](https://github.com/uf-hobi-informatics-lab/ClinicalTransformerRelationExtraction/wiki/All-flags-explained-for-training-and-test)
+
 ```shell script
 export CUDA_VISIBLE_DEVICES=1
 data_dir=./sample_data
@@ -59,7 +65,7 @@ log=./log.txt
 python ./src/relation_extraction.py \
 		--model_type bert \
 		--data_format_mode 0 \
-		--classification_scheme 2 \
+		--classification_scheme 1 \
 		--pretrained_model bert-base-uncased \
 		--data_dir $data_dir \
 		--new_model_dir $nmd \
@@ -90,10 +96,11 @@ nmd=./new_model
 pof=./predictions.txt
 log=./log.txt
 
+# we have to set data_dir, new_model_dir, model_type, log_file, and eval_batch_size, data_format_mode
 python ./src/relation_extraction.py \
 		--model_type bert \
 		--data_format_mode 0 \
-		--classification_scheme 2 \
+		--classification_scheme 1 \
 		--pretrained_model bert-base-uncased \
 		--data_dir $data_dir \
 		--new_model_dir $nmd \
@@ -104,19 +111,11 @@ python ./src/relation_extraction.py \
 		--cache_data \
 		--do_predict \
 		--do_lower_case \
-		--train_batch_size 4 \
 		--eval_batch_size 4 \
-		--learning_rate 1e-5 \
-		--num_train_epochs 3 \
-		--gradient_accumulation_steps 1 \
-		--do_warmup \
-		--warmup_ratio 0.1 \
-		--weight_decay 0 \
-		--max_num_checkpoints 1 \
 		--log_file $log \
 ```
 
-- post-processing (to brat format)
+- post-processing (we only support transformation to brat format)
 ```shell script
 # see --help for more information
 data_dir=./sample_data
