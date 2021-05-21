@@ -1,5 +1,4 @@
 import traceback
-from sklearn.metrics import f1_score, precision_recall_fscore_support, accuracy_score
 from config import MODEL_REQUIRE_SEGMENT_ID, SPEC_TAGS
 import csv
 from pathlib import Path
@@ -10,18 +9,6 @@ from tqdm import tqdm
 from functools import partial
 from concurrent.futures import ProcessPoolExecutor
 import numpy as np
-
-
-def try_catch_annotator(func):
-
-    def try_catch(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except Exception:
-            traceback.print_exc()
-            return None
-
-    return try_catch
 
 
 class InputExample(object):
@@ -418,14 +405,3 @@ class RelationDataFormatUniProcessor(DataProcessor):
             text_a = " ".join(w1)
 
         return text_a
-
-
-def acc_and_f1(labels, preds):
-    acc = accuracy_score(labels, preds)
-    pm, rm, fm, _ = precision_recall_fscore_support(y_true=labels, y_pred=preds, average='micro')
-    pw, rw, fw, _ = precision_recall_fscore_support(y_true=labels, y_pred=preds, average='weighted')
-
-    return {
-        "acc": acc,
-        "F1-micro": fm, "Pre-micro": pm, "Rec-micro": rm,
-        "F1-weight": fw, "Pre-weight": pw, "Rec-weight": rw}

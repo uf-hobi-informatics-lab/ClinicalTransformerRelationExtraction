@@ -38,20 +38,6 @@ def app(gargs):
             traceback.print_exc()
             raise RuntimeError()
 
-        if gargs.do_eval:
-            # eval on dev
-            try:
-                eval_res = task_runner.eval()
-            except Exception as ex:
-                gargs.logger.error("Evaluation error:\n{}".format(traceback.format_exc()))
-                raise RuntimeError(traceback.format_exc())
-
-            gargs.logger.info("eval performance:\n{}".format(eval_res))
-            eval_output = ""
-            for k, v in eval_res.items():
-                eval_output += "{}:{}\n".format(k, v)
-            save_text(eval_output, gargs.new_model_dir/"eval_result.txt")
-
     if gargs.do_predict:
         # run prediction
         try:
@@ -100,9 +86,9 @@ if __name__ == '__main__':
     parser.add_argument("--do_train", action='store_true',
                         help="Whether to run training.")
     parser.add_argument("--do_eval", action='store_true',
-                        help="Whether to run evaluation on dev.")
+                        help="Whether to run evaluation on dev. (require dev.tsv)")
     parser.add_argument("--do_predict", action='store_true',
-                        help="Whether to run prediction on the test set.")
+                        help="Whether to run prediction on the test set. (require test.tsv)")
     parser.add_argument("--do_lower_case", action='store_true',
                         help="Set this flag if you are using an uncased model.")
     parser.add_argument("--train_batch_size", default=8, type=int,

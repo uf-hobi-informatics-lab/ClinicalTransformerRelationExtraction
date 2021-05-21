@@ -6,7 +6,8 @@ This script is used for training and test
 # from data_utils import convert_examples_to_relation_extraction_features
 from data_utils import (features2tensors, relation_extraction_data_loader,
                         batch_to_model_input, RelationDataFormatSepProcessor,
-                        RelationDataFormatUniProcessor, acc_and_f1)
+                        RelationDataFormatUniProcessor)
+from utils import acc_and_f1
 from data_processing.io_utils import pkl_save, pkl_load
 from transformers import glue_convert_examples_to_features as convert_examples_to_relation_extraction_features
 from transformers import get_linear_schedule_with_warmup, get_cosine_schedule_with_warmup
@@ -126,6 +127,21 @@ class TaskRunner(object):
 
                 t_step += 1
             batch_iter.close()
+
+            # at each epoch end, we do eval
+            if self.args.do_eval:
+                a, res = self.eval()
+                self.args.logger.info("""
+                ******************************
+                Epcoh: {}
+                evaluation on dev set
+                acc: {}
+                precision, recall, f1:
+                {}
+                ******************************
+                """.format(epoch, a, res))
+
+            # TODO: save strategy?
         epoch_iter.close()
 
         self._save_model()
@@ -137,8 +153,7 @@ class TaskRunner(object):
         # this is done on dev
         true_labels = np.array([dev_fea.label for dev_fea in self.dev_features])
         preds, eval_loss = self._run_eval(self.dev_data_loader)
-        # TODO: add eval step to suppor train-dev mode
-        eval_metric = acc_and_f1(labels=true_labels, preds=preds)
+        eval_metric = acc_and_f1(labels=true_labels, preds=preds, label2idx=self.label2idx)
 
         return eval_metric
 
