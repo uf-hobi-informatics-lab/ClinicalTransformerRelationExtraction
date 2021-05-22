@@ -317,24 +317,37 @@ class TaskRunner(object):
 
         return preds, temp_loss
 
+    def _load_examples_by_task(self, task="train"):
+        if task == "train":
+            examples = self.data_processor.get_train_examples()
+        elif task == "dev":
+            examples = self.data_processor.get_dev_examples()
+        elif task == "test":
+            examples = self.data_processor.get_test_examples()
+        else:
+            raise RuntimeError("expect task to be train, dev or test but get {}".format(task))
+
+    def _check_cache(self, task="train"):
+        cached_examples_file = Path(self.args.data_dir) / "cached_{}_{}_{}_{}_{}.pkl".format(
+            self.args.model_type, self.args.data_format_mode, self.args.max_seq_length,
+            self.tokenizer.name_or_path.split("/")[-1], task)
+        # load examples from files or cache
+        if self.args.cache_data and cached_examples_file.exists():
+            examples = pkl_load(cached_examples_file)
+            self.args.logger.info("load {} data from cached file: {}".format(task, cached_examples_file))
+        elif self.args.cache_data and not cached_examples_file.exists():
+            self.args.logger.info(
+                "create {} examples...and will cache the processed data at {}".format(task, cached_examples_file))
+            examples = self._load_examples_by_task(task)
+            pkl_save(examples, cached_examples_file)
+        else:
+            self.args.logger.info("create training examples...the processed data will not be cached")
+            examples = self._load_examples_by_task(task)
+        return examples
+
     def _load_data(self):
         if self.args.do_train:
-            cached_examples_file = Path(self.args.data_dir) / "cached_{}_{}_{}_train.pkl".format(
-                self.args.model_type, self.args.data_format_mode, self.args.max_seq_length)
-
-            # load examples from files or cache
-            if self.args.cache_data and cached_examples_file.exists():
-                train_examples = pkl_load(cached_examples_file)
-                self.args.logger.info("load training data from cached file: {}".format(cached_examples_file))
-            elif self.args.cache_data and not cached_examples_file.exists():
-                self.args.logger.info(
-                    "create training examples...and will cache the processed data at {}".format(cached_examples_file))
-                train_examples = self.data_processor.get_train_examples()
-                pkl_save(train_examples, cached_examples_file)
-            else:
-                self.args.logger.info("create training examples...the processed data will not be cached")
-                train_examples = self.data_processor.get_train_examples()
-
+            train_examples = self._check_cache(task="train")
             # convert examples to tensor
             train_features = convert_examples_to_relation_extraction_features(
                 train_examples,
@@ -347,21 +360,7 @@ class TaskRunner(object):
                 train_features, batch_size=self.args.train_batch_size, task="train", logger=self.args.logger)
 
         if self.args.do_eval:
-            cached_examples_file = Path(self.args.data_dir) / "cached_{}_{}_{}_dev.pkl".format(
-                self.args.model_type, self.args.data_format_mode, self.args.max_seq_length)
-
-            # load examples from files or cache
-            if self.args.cache_data and cached_examples_file.exists():
-                dev_examples = pkl_load(cached_examples_file)
-            elif self.args.cache_data and not cached_examples_file.exists():
-                self.args.logger.info(
-                    "create dev examples...and will cache the processed data at {}".format(cached_examples_file))
-                dev_examples = self.data_processor.get_dev_examples()
-                pkl_save(dev_examples, cached_examples_file)
-            else:
-                self.args.logger.info("create dev examples...the processed data will not be cached")
-                dev_examples = self.data_processor.get_dev_examples()
-
+            dev_examples = self._check_cache(task="dev")
             # example2feature
             dev_features = convert_examples_to_relation_extraction_features(
                 dev_examples,
@@ -375,22 +374,7 @@ class TaskRunner(object):
                 dev_features, batch_size=self.args.train_batch_size, task="test", logger=self.args.logger)
 
         if self.args.do_predict:
-            cached_examples_file = Path(self.args.data_dir) / "cached_{}_{}_{}_test.pkl".format(
-                self.args.model_type, self.args.data_format_mode, self.args.max_seq_length)
-
-            # load examples from files or cache
-            if self.args.cache_data and cached_examples_file.exists():
-                self.args.logger.info("load test data from cached file: {}".format(cached_examples_file))
-                test_examples = pkl_load(cached_examples_file)
-            elif self.args.cache_data and not cached_examples_file.exists():
-                self.args.logger.info(
-                    "create evaluation examples...and will cache the processed data at {}".format(cached_examples_file))
-                test_examples = self.data_processor.get_test_examples()
-                pkl_save(test_examples, cached_examples_file)
-            else:
-                self.args.logger.info("create evaluation examples...the processed data will not be cached")
-                test_examples = self.data_processor.get_test_examples()
-
+            test_examples = self._check_cache(task="test")
             # example2feature
             test_features = convert_examples_to_relation_extraction_features(
                 test_examples,
