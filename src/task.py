@@ -17,6 +17,7 @@ import numpy as np
 from packaging import version
 from pathlib import Path
 from config import SPEC_TAGS, MODEL_DICT
+import shutil
 
 
 class TaskRunner(object):
@@ -71,6 +72,7 @@ class TaskRunner(object):
         self.args.logger.info("start training...")
         tr_loss = .0
         t_step = 0
+        latest_best_score = .0
 
         epoch_iter = trange(self.args.num_train_epochs, desc="Epoch", disable=not self.args.progress_bar)
         for epoch in epoch_iter:
@@ -123,14 +125,14 @@ class TaskRunner(object):
                 if self.args.log_step > 0 and (step+1) % self.args.log_step == 0:
                     self.args.logger.info(
                         "epoch: {}; global step: {}; total loss: {}; average loss: {}".format(
-                            epoch, t_step, tr_loss, tr_loss/t_step))
+                            epoch+1, t_step, tr_loss, tr_loss/t_step))
 
                 t_step += 1
             batch_iter.close()
 
-            # at each epoch end, we do eval
+            # at each epoch end, we do eval on dev
             if self.args.do_eval:
-                a, res = self.eval()
+                acc, prf, f1 = self.eval(self.args.non_relation_label)
                 self.args.logger.info("""
                 ******************************
                 Epcoh: {}
@@ -139,22 +141,31 @@ class TaskRunner(object):
                 precision, recall, f1:
                 {}
                 ******************************
-                """.format(epoch, a, res))
+                """.format(epoch+1, acc, prf))
+                # max_num_checkpoints > 0, save based on eval
+                # save model
+                if self.args.max_num_checkpoints > 0 and latest_best_score < f1:
+                    self._save_model(epoch+1)
+                    latest_best_score = f1
         epoch_iter.close()
 
-        # TODO: save strategy? save each epoch? use max checkpoint number?
-        self._save_model()
-        self.args.logger.info("training finish and the trained model is saved.")
+        # max_num_checkpoints=-1 then save at the end of training
+        if self.args.max_num_checkpoints <= 0:
+            self._save_model(0)
+            self.args.logger.info("training finish and the trained model is saved.")
 
-    def eval(self):
+    def eval(self, non_rel_label=""):
         self.args.logger.info("start evaluation...")
 
         # this is done on dev
         true_labels = np.array([dev_fea.label for dev_fea in self.dev_features])
         preds, eval_loss = self._run_eval(self.dev_data_loader)
-        eval_metric = acc_and_f1(labels=true_labels, preds=preds, label2idx=self.label2idx)
+        eval_res = acc_and_f1(labels=true_labels,
+                                 preds=preds,
+                                 label2idx=self.label2idx,
+                                 non_rel_label=non_rel_label)
 
-        return eval_metric
+        return eval_res
 
     def predict(self):
         self.args.logger.info("start prediction...")
@@ -232,12 +243,17 @@ class TaskRunner(object):
 
     def _init_trained_model(self):
         """initialize a fine-tuned model for prediction"""
-        self.args.logger.info("Init model from {} for prediction".format(self.args.new_model_dir))
+        p = Path(self.args.new_model_dir)
+        dir_list = [d for d in p.iterdir() if d.is_dir()]
+        latest_ckpt_dir = sorted(dir_list, key=lambda x: int(x.stem.split("_")[-1]))[-1]
+
+        self.args.logger.info("Init model from {} for prediction".format(latest_ckpt_dir))
 
         model, config, tokenizer = self.model_dict[self.args.model_type]
-        self.config = config.from_pretrained(self.args.new_model_dir)
-        self.tokenizer = tokenizer.from_pretrained(self.args.new_model_dir, do_lower_case=self.args.do_lower_case)
-        self.model = model.from_pretrained(self.args.new_model_dir, config=self.config)
+
+        self.config = config.from_pretrained(latest_ckpt_dir)
+        self.tokenizer = tokenizer.from_pretrained(latest_ckpt_dir, do_lower_case=self.args.do_lower_case)
+        self.model = model.from_pretrained(latest_ckpt_dir, config=self.config)
 
         # load label2idx
         self.label2idx, self.idx2label = pkl_load(Path(self.args.new_model_dir)/"label_index.pkl")
@@ -260,13 +276,21 @@ class TaskRunner(object):
             finally:
                 self.args.fp16 = False
 
-    def _save_model(self):
-        Path(self.args.new_model_dir).mkdir(parents=True, exist_ok=True)
-        self.tokenizer.save_pretrained(self.args.new_model_dir)
-        self.config.save_pretrained(self.args.new_model_dir)
-        self.model.save_pretrained(self.args.new_model_dir)
+    def _save_model(self, epoch=0):
+        p = Path(self.args.new_model_dir)
+        p.mkdir(parents=True, exist_ok=True)
+        dir_to_save = p / f"ckpt_{epoch}"
+
+        self.tokenizer.save_pretrained(dir_to_save)
+        self.config.save_pretrained(dir_to_save)
+        self.model.save_pretrained(dir_to_save)
         # save label2idx
-        pkl_save((self.label2idx, self.idx2label), Path(self.args.new_model_dir)/"label_index.pkl")
+        pkl_save((self.label2idx, self.idx2label), dir_to_save/"label_index.pkl")
+        # remove extra checkpoints
+        dir_list = [d for d in p.iterdir() if d.is_dir()]
+        if len(dir_list) > self.args.max_num_checkpoints > 0:
+            oldest_ckpt_dir = sorted(dir_list, key=lambda x: int(x.stem.split("_")[-1]))[0]
+            shutil.rmtree(oldest_ckpt_dir)
 
     def _run_eval(self, data_loader):
         temp_loss = .0

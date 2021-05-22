@@ -53,7 +53,7 @@ note:
 
 - training
 > please refer to the wiki page for all details of the parameters
-> [Sites Using React](https://github.com/uf-hobi-informatics-lab/ClinicalTransformerRelationExtraction/wiki/All-flags-explained-for-training-and-test)
+> [flag details](https://github.com/uf-hobi-informatics-lab/ClinicalTransformerRelationExtraction/wiki/All-flags-explained-for-training-and-test)
 
 ```shell script
 export CUDA_VISIBLE_DEVICES=1

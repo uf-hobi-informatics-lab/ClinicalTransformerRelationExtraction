@@ -80,7 +80,7 @@ def calc(tp, tp_fp, tp_tn):
     return round(pre, 4), round(rec, 4), round(f1, 4)
 
 
-def measure_prf(preds, gs_labels):
+def measure_prf(preds, gs_labels, non_rel_label):
     res = dict()
     temp = defaultdict(PRF)
     total_tp, total_tp_fp, total_tp_tn = 0, 0, 0
@@ -99,6 +99,8 @@ def measure_prf(preds, gs_labels):
                 temp[l].fp += 1
 
     for l in labels:
+        if l == non_rel_label:
+            continue
         tp, fp = temp[l].tp, temp[l].fp
         tp_fp = tp + fp
         tp_tn = tn_dict[l]
@@ -108,21 +110,22 @@ def measure_prf(preds, gs_labels):
         total_tp_fp += tp_fp
         total_tp_tn += tp_tn
 
-    res['micro_avg (with negative class)'] = calc(total_tp, total_tp_fp, total_tp_tn)
+    res['micro_average_pre_rec_f1'] = calc(total_tp, total_tp_fp, total_tp_tn)
+    f1 = res['micro_average_pre_rec_f1'][-1]
 
-    return res
+    return res, f1
 
 
-def acc_and_f1(labels, preds, label2idx):
+def acc_and_f1(labels, preds, label2idx, non_rel_label):
     acc = accuracy_score(labels, preds)
 
     idx2label = {v: k for k, v in label2idx.items()}
     new_labels = [idx2label[e] for e in labels]
     new_preds = [idx2label[e] for e in preds]
-    prf_list = measure_prf(new_preds, new_labels)
+    prf_list, f1 = measure_prf(new_preds, new_labels, non_rel_label)
     prf_list = sorted(prf_list.items(), key=lambda x: len(x[0]))
     res = []
     for k, v in prf_list:
         res.append(f"{k} - pre: {v[0]}, rec: {v[1]}, f1: {v[2]}")
 
-    return acc, "\n".join(res)
+    return acc, "\n".join(res), f1

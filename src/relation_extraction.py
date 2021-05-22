@@ -74,7 +74,7 @@ if __name__ == '__main__':
                         help="predicted results output file.")
     parser.add_argument('--overwrite_model_dir', action='store_true',
                         help="Overwrite the content of the new model directory")
-    parser.add_argument("--seed", default=3, type=int,
+    parser.add_argument("--seed", default=1234, type=int,
                         help='random seed')
     parser.add_argument("--max_seq_length", default=512, type=int,
                         help="maximum number of tokens allowed in each sentence")
@@ -111,8 +111,9 @@ if __name__ == '__main__':
                         help="Epsilon for Adam optimizer.")
     parser.add_argument("--max_grad_norm", default=1.0, type=float,
                         help="Max gradient norm.")
-    parser.add_argument("--max_num_checkpoints", default=3, type=int,
-                        help="max number of checkpoints saved during training, old checkpoints will be removed.")
+    parser.add_argument("--max_num_checkpoints", default=0, type=int,
+                        help="max number of checkpoints saved during training, old checkpoints will be removed."
+                             "if -1, then only save the last one at the end of training")
     parser.add_argument("--log_file", default=None,
                         help="where to save the log information")
     parser.add_argument("--log_lvl", default="i", type=str,
@@ -121,6 +122,9 @@ if __name__ == '__main__':
                         help="logging after how many steps of training. If < 0, no log during training")
     parser.add_argument("--num_core", default=-1, type=int,
                         help="how many cores used for multiple process for data generation")
+    parser.add_argument("--non_relation_label", default="NonRel", type=str,
+                        help="The label used for representing "
+                             "candidate entity pairs that is not a true relation (negative sample)")
     parser.add_argument("--progress_bar", action='store_true',
                         help="show progress during the training in tqdm")
     parser.add_argument('--fp16', action='store_true',
