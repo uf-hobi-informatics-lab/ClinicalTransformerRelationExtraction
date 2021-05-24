@@ -282,6 +282,24 @@ class RelationDataFormatSepProcessor(DataProcessor):
 
         return examples
 
+    @staticmethod
+    def _truncate_helper(text):
+        tokens = text.split(" ")
+        spec_tag_idx1, spec_tag_idx2 = [idx for (idx, tk) in enumerate(tokens) if tk.lower() in SPEC_TAGS]
+        start_idx, end_idx = 0, len(tokens) - 1
+        truncate_space_head = spec_tag_idx1 - start_idx
+        truncate_space_tail = end_idx - spec_tag_idx2
+
+        if truncate_space_head == truncate_space_tail == 0:
+            return text
+
+        if truncate_space_head > truncate_space_tail:
+            tokens.pop(0)
+        else:
+            tokens.pop(-1)
+
+        return " ".join(tokens)
+
     def _process_seq_len(self, text_a, text_b, total_special_toks=3):
         """
             This function is used to truncate sequences with len > max_seq_len
@@ -292,42 +310,17 @@ class RelationDataFormatSepProcessor(DataProcessor):
             4. pick the longest distance from (1, 2), if 1 remove first token, if 2 remove last token
             5. repeat until len is equal to max_seq_len
         """
+        flag = True
+
         while len(self.tokenizer.tokenize(text_a) + self.tokenizer.tokenize(text_b)) \
                 > (self.max_seq_len - total_special_toks):
 
-            w1 = text_a.split(" ")
-            w2 = text_b.split(" ")
-
-            t1, t2 = [idx for (idx, w) in enumerate(w1) if w.lower() in SPEC_TAGS]
-            t3, t4 = [idx for (idx, w) in enumerate(w2) if w.lower() in SPEC_TAGS]
-
-            ss1, se1 = 0, len(w1)-1
-            ss2, se2 = 0, len(w2)-1
-
-            # assumption here is that entity len << sentence len
-            a1 = t1 - ss1
-            b1 = se1 - t2
-            a2 = t3 - ss2
-            b2 = se2 - t4
-
-            if a1 > b1:
-                w1.pop(0)
-            elif a1 == b1 == 0:
-                # start and end are both special tags, we skip truncating
-                pass
+            if flag:
+                text_a = self._truncate_helper(text_a)
             else:
-                w1.pop(-1)
+                text_b = self._truncate_helper(text_b)
 
-            if a2 > b2:
-                w2.pop(0)
-            elif a2 == b2 == 0:
-                # start and end are both special tags, we skip truncating
-                pass
-            else:
-                w2.pop(-1)
-
-            text_a = " ".join(w1)
-            text_b = " ".join(w2)
+            flag = not flag
 
         return text_a, text_b
 

@@ -51,6 +51,20 @@ note:
 
 > you can follow our example to generate your own dataset
 
+- special tags
+> we use 4 special tags to identify two entities in a relation
+```
+# the defaults tags we defined in the repo are
+
+EN1_START = "[s1]"
+EN1_END = "[e1]"
+EN2_START = "[s2]"
+EN2_END = "[e2]"
+
+If you need to customize these tags, you can change them in
+config.py
+```
+
 - training
 > please refer to the wiki page for all details of the parameters
 > [flag details](https://github.com/uf-hobi-informatics-lab/ClinicalTransformerRelationExtraction/wiki/All-flags-explained-for-training-and-test)

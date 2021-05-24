@@ -149,7 +149,7 @@ class TaskRunner(object):
                     latest_best_score = f1
         epoch_iter.close()
 
-        # max_num_checkpoints=-1 then save at the end of training
+        # max_num_checkpoints=0 then save at the end of training
         if self.args.max_num_checkpoints <= 0:
             self._save_model(0)
             self.args.logger.info("training finish and the trained model is saved.")
