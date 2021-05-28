@@ -26,6 +26,8 @@ def app(gargs):
     # make it case in-sensitive
     gargs.model_type = gargs.model_type.lower()
     task_runner = TaskRunner(gargs)
+    task_runner.task_runner_default_init()
+
     if gargs.do_train:
         if Path(gargs.new_model_dir).exists() and not gargs.overwrite_model_dir:
             raise RuntimeError("{} is exist and overwrite this dir is not permitted.".format(gargs.new_model_dir))
@@ -60,7 +62,7 @@ if __name__ == '__main__':
                         help="valid values: bert, roberta, albert or xlnet")
     parser.add_argument("--data_format_mode", default=0, type=int,
                         help="valid values: 0: sep mode - [CLS]S1[SEP]S2[SEP]; 1: uni mode - [CLS]S1S2[SEP]")
-    parser.add_argument("--classification_scheme", default=0, type=int,
+    parser.add_argument("--classification_scheme", default=2, type=int,
                         help="special tokens used for classification. "
                              "Valid values: "
                              "0: [CLS]; 1: [CLS], [S1], [S2]; 2: [CLS], [S1], [S2], [E1], [E2]; 3: [S1], [S2]")
@@ -113,7 +115,7 @@ if __name__ == '__main__':
                         help="Max gradient norm.")
     parser.add_argument("--max_num_checkpoints", default=0, type=int,
                         help="max number of checkpoints saved during training, old checkpoints will be removed."
-                             "if -1, then only save the last one at the end of training")
+                             "if 0, then only save the last one at the end of training")
     parser.add_argument("--log_file", default=None,
                         help="where to save the log information")
     parser.add_argument("--log_lvl", default="i", type=str,

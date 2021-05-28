@@ -1,5 +1,5 @@
 import traceback
-from config import MODEL_REQUIRE_SEGMENT_ID, SPEC_TAGS
+from config import MODEL_REQUIRE_SEGMENT_ID, SPEC_TAGS, TOKENIZER_USE_FOUR_SPECIAL_TOKs
 import csv
 from pathlib import Path
 import torch
@@ -95,7 +95,7 @@ def features2tensors(features, logger=None):
 
     for idx, feature in enumerate(features):
         if logger and idx < 3:
-            logger.info("Feature{}:\n{}\n".format(idx+1, feature))
+            logger.info("Feature{}:\n{}\n".format(idx + 1, feature))
 
         tensor_input_ids.append(feature.input_ids)
         tensor_attention_masks.append(feature.attention_mask)
@@ -137,7 +137,6 @@ def relation_extraction_data_loader(dataset, batch_size=2, task='train', logger=
 
 
 def batch_to_model_input(batch, model_type="bert", device=torch.device("cpu")):
-
     return {"input_ids": batch[0].to(device),
             "attention_mask": batch[1].to(device),
             "labels": batch[3].to(device),
@@ -158,12 +157,16 @@ class DataProcessor(object):
         self.num_core = num_core
         self.header = header
         self.tokenizer_type = tokenizer_type
+        self.total_special_token_num = 3
 
     def set_data_dir(self, data_dir):
         self.data_dir = Path(data_dir)
 
     def set_tokenizer(self, tokenizer):
         self.tokenizer = tokenizer
+
+    def set_max_seq_len(self, max_seq_len):
+        self.max_seq_len = max_seq_len
 
     def set_tokenizer_type(self, tokenizer_type):
         self.tokenizer_type = tokenizer_type
@@ -195,18 +198,30 @@ class DataProcessor(object):
         return self._create_examples(
             self._read_tsv(input_file_name), "test")
 
-    def get_labels(self, filename=None):
+    def get_labels(self, train_file=None, label_file=None):
         """
             Gets the list of labels for this data set.
-            In all different formats, the first column always should be label
+            1. use labels in train file for indexing
+                In all different formats, the first column always should be label
+            2. add a label index file
+                A plain text with each unique label in one line
         """
-        lines = self._read_tsv(self.data_dir / filename if filename else self.data_dir / "train.tsv")
-        unique_labels = set()
-
-        for (i, line) in enumerate(lines):
-            if i == 0:
-                continue
-            unique_labels.add(line[0])
+        if label_file:
+            with open(label_file, "r") as f:
+                unique_labels = [e.strip() for e in f.read().strip().split("\n")]
+        elif label_file is None and train_file:
+            lines = self._read_tsv(train_file)
+            unique_labels = set()
+            for (i, line) in enumerate(lines):
+                unique_labels.add(line[0])
+        elif label_file is None and train_file is None and self.data_dir:
+            lines = self._read_tsv(self.data_dir / "train.tsv")
+            unique_labels = set()
+            for (i, line) in enumerate(lines):
+                unique_labels.add(line[0])
+        else:
+            raise RuntimeError("Cannot find files to generate labels"
+                               "You need one of label_file, train_file (full path) or data_dir setup")
 
         label2idx = {k: v for v, k in enumerate(unique_labels)}
         idx2label = {v: k for k, v in label2idx.items()}
@@ -227,7 +242,6 @@ class DataProcessor(object):
             reader = csv.reader(f, delimiter="\t", quotechar=quotechar)
             for line in reader:
                 lines.append(line)
-
         if header:
             lines = lines[1:]
 
@@ -241,7 +255,8 @@ class RelationDataFormatSepProcessor(DataProcessor):
             <s> sent1 </s> </s> sent2 </s> : RoBERTa, LongFormer
             sent1 <sep> sent2 <sep> <cls>
     """
-    def _create_examples_helper(self, lines_idx, set_type, tst):
+
+    def _create_examples_helper(self, lines_idx, set_type, total_special_toks):
         start_idx, lines = lines_idx
         examples = []
         for (i, line) in enumerate(tqdm(lines)):
@@ -253,7 +268,7 @@ class RelationDataFormatSepProcessor(DataProcessor):
             # 1. skip all these cases
             # 2. use truncate strategy
             # we adopt truncate way (2) in this implementation as _process_seq_len
-            text_a, text_b = self._process_seq_len(text_a, text_b, total_special_toks=tst)
+            text_a, text_b = self._process_seq_len(text_a, text_b, total_special_toks=total_special_toks)
             examples.append(
                 InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
         return examples
@@ -261,14 +276,12 @@ class RelationDataFormatSepProcessor(DataProcessor):
     def _create_examples(self, lines, set_type):
         """Creates examples for the training and dev sets."""
 
-        if self.tokenizer_type in {'roberta', 'longformer'}:
-            tst = 4
-        else:
-            tst = 3
+        if self.tokenizer_type in TOKENIZER_USE_FOUR_SPECIAL_TOKs:
+            self.total_special_token_num = 4
 
         if self.num_core < 2:
             # single process - maybe too slow - replace with multiprocess
-            examples = self._create_examples_helper((0, lines), set_type, tst)
+            examples = self._create_examples_helper((0, lines), set_type, self.total_special_token_num)
         else:
             # multi-process - assume the first read-in data is the csv title with no data information
             # use multi-cores to process data if you have many long sentences;
@@ -276,7 +289,9 @@ class RelationDataFormatSepProcessor(DataProcessor):
             examples = []
             array_lines = np.array_split(lines, self.num_core)
             with ProcessPoolExecutor(max_workers=self.num_core) as exe:
-                for each in exe.map(partial(self._create_examples_helper, set_type=set_type, tst=tst),
+                for each in exe.map(partial(self._create_examples_helper,
+                                            set_type=set_type,
+                                            total_special_toks=self.total_special_token_num),
                                     enumerate(array_lines)):
                     examples.extend(each)
 
@@ -331,7 +346,7 @@ class RelationDataFormatUniProcessor(DataProcessor):
             [CLS] sent1 sent2 [SEP]
     """
 
-    def _create_examples_helper(self, lines_idx, set_type, tst):
+    def _create_examples_helper(self, lines_idx, set_type, total_special_toks):
         examples = []
         start_idx, lines = lines_idx
         for (i, line) in enumerate(lines):
@@ -353,20 +368,20 @@ class RelationDataFormatUniProcessor(DataProcessor):
     def _create_examples(self, lines, set_type):
         """Creates examples for the training and dev sets."""
 
-        if self.tokenizer_type in {'roberta', 'longformer'}:
-            tst = 4
-        else:
-            tst = 3
+        if self.tokenizer_type in TOKENIZER_USE_FOUR_SPECIAL_TOKs:
+            self.total_special_token_num = 4
 
         if self.num_core < 2:
             # single process
-            examples = self._create_examples_helper((0, lines), set_type, tst)
+            examples = self._create_examples_helper((0, lines), set_type, self.total_special_token_num)
         else:
             # multi-process
             examples = []
             array_lines = np.array_split(lines, self.num_core)
             with ProcessPoolExecutor(max_workers=self.num_core) as exe:
-                for each in exe.map(partial(self._create_examples_helper, set_type=set_type, tst=tst),
+                for each in exe.map(partial(self._create_examples_helper,
+                                            set_type=set_type,
+                                            total_special_toks=self.total_special_token_num),
                                     enumerate(array_lines)):
                     examples.extend(each)
 
@@ -376,7 +391,7 @@ class RelationDataFormatUniProcessor(DataProcessor):
         """
             see RelationDataFormatSepProcessor._process_seq_len for details
         """
-        while len(self.tokenizer.tokenize(text_a)) > (self.max_seq_len-2):
+        while len(self.tokenizer.tokenize(text_a)) > (self.max_seq_len - 2):
             w1 = text_a.split(" ")
             t1, t2, t3, t4 = [idx for (idx, w) in enumerate(w1) if w.lower() in SPEC_TAGS]
             ss1, mid1, se1 = 0, (len(w1) - 1) // 2, len(w1) - 1

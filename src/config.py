@@ -16,5 +16,8 @@ MODEL_DICT = {
     "roberta": (RoBERTaForRelationIdentification, RobertaConfig, RobertaTokenizer),
     "xlnet": (XLNetForRelationIdentification, XLNetConfig, XLNetTokenizer),
     "albert": (AlbertForRelationIdentification, AlbertConfig, AlbertTokenizer),
-    "longformer": (LongFormerForRelationIdentification, LongformerConfig, LongformerTokenizer)
+    "longformer": (LongFormerForRelationIdentification, LongformerConfig, LongformerTokenizer),
+    "deberta": ()
 }
+
+TOKENIZER_USE_FOUR_SPECIAL_TOKs = {'roberta', 'longformer', 'deberta'}

@@ -27,17 +27,26 @@ class TaskRunner(object):
 
         self.args = args
         self.model_dict = MODEL_DICT
+        self.train_data_loader = None
+        self.dev_data_loader = None
+        self.test_data_loader = None
+        self.data_processor = None
+        self._use_amp_for_fp16_from = 0
 
+    def task_runner_default_init(self):
         # set up data processor
-        if self.args.data_format_mode == 0:
-            self.data_processor = RelationDataFormatSepProcessor(
-                max_seq_len=self.args.max_seq_length, num_core=self.args.num_core)
-        elif self.args.data_format_mode == 1:
-            self.data_processor = RelationDataFormatUniProcessor(
-                max_seq_len=self.args.max_seq_length, num_core=self.args.num_core)
+        if self.data_processor is None:
+            if self.args.data_format_mode == 0:
+                self.data_processor = RelationDataFormatSepProcessor(
+                    max_seq_len=self.args.max_seq_length, num_core=self.args.num_core)
+            elif self.args.data_format_mode == 1:
+                self.data_processor = RelationDataFormatUniProcessor(
+                    max_seq_len=self.args.max_seq_length, num_core=self.args.num_core)
+            else:
+                raise NotImplementedError("Only support 0, 1 but get data_format_mode as {}"
+                                          .format(self.args.data_format_mode))
         else:
-            raise NotImplementedError("Only support 0, 1 but get data_format_mode as {}"
-                                      .format(self.args.data_format_mode))
+            self.args.logger.warning("Use user defined data processor: {}".format(self.data_processor))
 
         self.data_processor.set_data_dir(self.args.data_dir)
         self.data_processor.set_header(self.args.data_file_header)
@@ -47,19 +56,15 @@ class TaskRunner(object):
             # init amp for fp16 (mix precision training)
             # _use_amp_for_fp16_from: 0 for no fp16; 1 for naive PyTorch amp; 2 for apex amp
             if self.args.fp16:
-                self._use_amp_for_fp16_from = 0
                 self._load_amp_for_fp16()
             self._init_new_model()
         else:
             self._init_trained_model()
-        # load data
-        self.train_data_loader = None
-        self.dev_data_loader = None
-        self.test_data_loader = None
 
+        # load data
         self.data_processor.set_tokenizer(self.tokenizer)
         self.data_processor.set_tokenizer_type(self.args.model_type)
-        self._load_data()
+        self._init_dataloader()
 
         if self.args.do_train:
             self._init_optimizer()
@@ -318,6 +323,8 @@ class TaskRunner(object):
         return preds, temp_loss
 
     def _load_examples_by_task(self, task="train"):
+        examples = None
+
         if task == "train":
             examples = self.data_processor.get_train_examples()
         elif task == "dev":
@@ -326,6 +333,8 @@ class TaskRunner(object):
             examples = self.data_processor.get_test_examples()
         else:
             raise RuntimeError("expect task to be train, dev or test but get {}".format(task))
+
+        return examples
 
     def _check_cache(self, task="train"):
         cached_examples_file = Path(self.args.data_dir) / "cached_{}_{}_{}_{}_{}.pkl".format(
@@ -341,12 +350,13 @@ class TaskRunner(object):
             examples = self._load_examples_by_task(task)
             pkl_save(examples, cached_examples_file)
         else:
-            self.args.logger.info("create training examples...the processed data will not be cached")
+            self.args.logger.info("create training examples..."
+                                  "the processed data will not be cached")
             examples = self._load_examples_by_task(task)
         return examples
 
-    def _load_data(self):
-        if self.args.do_train:
+    def _init_dataloader(self):
+        if self.args.do_train and self.train_data_loader is None:
             train_examples = self._check_cache(task="train")
             # convert examples to tensor
             train_features = convert_examples_to_relation_extraction_features(
@@ -359,7 +369,7 @@ class TaskRunner(object):
             self.train_data_loader = relation_extraction_data_loader(
                 train_features, batch_size=self.args.train_batch_size, task="train", logger=self.args.logger)
 
-        if self.args.do_eval:
+        if self.args.do_eval and self.dev_data_loader is None:
             dev_examples = self._check_cache(task="dev")
             # example2feature
             dev_features = convert_examples_to_relation_extraction_features(
@@ -373,7 +383,7 @@ class TaskRunner(object):
             self.dev_data_loader = relation_extraction_data_loader(
                 dev_features, batch_size=self.args.train_batch_size, task="test", logger=self.args.logger)
 
-        if self.args.do_predict:
+        if self.args.do_predict and self.test_data_loader is None:
             test_examples = self._check_cache(task="test")
             # example2feature
             test_features = convert_examples_to_relation_extraction_features(
