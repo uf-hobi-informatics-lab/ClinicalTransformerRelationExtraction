@@ -17,6 +17,8 @@ We only support train-dev mode, but you can do 5-fold CV.
 - XLNet
 - RoBERTa
 - ALBERT
+- DeBERTa
+- Longformer
 > We will keep adding new models.
 
 ## usage and example
