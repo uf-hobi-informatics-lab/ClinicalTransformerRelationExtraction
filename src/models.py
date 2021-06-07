@@ -8,7 +8,9 @@ from transformers import (BertForSequenceClassification, BertModel,
                           RobertaForSequenceClassification, RobertaModel,
                           AlbertForSequenceClassification, AlbertModel,
                           LongformerForSequenceClassification, LongformerModel,
+                          DebertaForSequenceClassification, DebertaModel,
                           PreTrainedModel)
+from model_utils import StableDropout
 
 
 logger = TransformerLogger(logger_level='i').get_logger()
@@ -23,6 +25,8 @@ class BaseModel(PreTrainedModel):
         self.scheme = config.scheme
         self.num_labels = config.num_labels
         self.loss_fct = CrossEntropyLoss()
+
+        self.drop_out = StableDropout(config.hidden_dropout_prob)
 
         if self.scheme == 1:
             self.classifier_dim = config.hidden_size * 3
@@ -65,18 +69,22 @@ class BaseModel(PreTrainedModel):
         else:
             new_pooled_output = pooled_output
 
-        logits = self.base_classifier(new_pooled_output)
+        logits = self.base_classifier(self.drop_out(new_pooled_output))
 
         return logits
+
+    def calc_loss(self, logits, outputs, labels):
+        new_outputs = (logits,) + outputs[2:]
+        loss = self.loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+        new_outputs = (loss,) + outputs
+
+        return new_outputs
 
 
 class BertForRelationIdentification(BertForSequenceClassification, BaseModel):
     def __init__(self, config):
         super().__init__(config)
-
         self.bert = BertModel(config)
-        self.dropout = nn.Dropout(config.hidden_dropout_prob)
-
         self.init_weights()
 
     def forward(self,
@@ -99,28 +107,16 @@ class BertForRelationIdentification(BertForSequenceClassification, BaseModel):
         )
 
         pooled_output = outputs[1]
-        pooled_output = self.dropout(pooled_output)
         seq_output = outputs[0]
-        seq_output = self.dropout(seq_output)
-
         logits = self.output2logits(pooled_output, seq_output, input_ids)
 
-        outputs = (logits,) + outputs[2:]
-
-        loss = self.loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
-
-        outputs = (loss,) + outputs
-
-        return outputs
+        return self.calc_loss(logits, outputs, labels)
 
 
 class RoBERTaForRelationIdentification(RobertaForSequenceClassification, BaseModel):
     def __init__(self, config):
         super().__init__(config)
-
         self.roberta = RobertaModel(config)
-        self.dropout = nn.Dropout(config.hidden_dropout_prob)
-
         self.init_weights()
 
     def forward(self,
@@ -146,28 +142,16 @@ class RoBERTaForRelationIdentification(RobertaForSequenceClassification, BaseMod
         )
 
         pooled_output = outputs[1]
-        pooled_output = self.dropout(pooled_output)
         seq_output = outputs[0]
-        seq_output = self.dropout(seq_output)
-
         logits = self.output2logits(pooled_output, seq_output, input_ids)
 
-        outputs = (logits,) + outputs[2:]
-
-        loss = self.loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
-
-        outputs = (loss,) + outputs
-
-        return outputs
+        return self.calc_loss(logits, outputs, labels)
 
 
 class AlbertForRelationIdentification(AlbertForSequenceClassification, BaseModel):
     def __init__(self, config):
         super().__init__(config)
-
         self.albert = AlbertModel(config)
-        self.dropout = nn.Dropout(config.hidden_dropout_prob)
-
         self.init_weights()
 
     def forward(self,
@@ -194,20 +178,10 @@ class AlbertForRelationIdentification(AlbertForSequenceClassification, BaseModel
         )
 
         pooled_output = outputs[1]
-        pooled_output = self.dropout(pooled_output)
-
         seq_output = outputs[0]
-        seq_output = self.dropout(seq_output)
-
         logits = self.output2logits(pooled_output, seq_output, input_ids)
 
-        outputs = (logits,) + outputs[2:]
-
-        loss = self.loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
-
-        outputs = (loss,) + outputs
-
-        return outputs
+        return self.calc_loss(logits, outputs, labels)
 
 
 class XLNetForRelationIdentification(XLNetForSequenceClassification, BaseModel):
@@ -250,16 +224,9 @@ class XLNetForRelationIdentification(XLNetForSequenceClassification, BaseModel):
 
         seq_output = outputs[0]
         pooled_output = self.sequence_summary(seq_output)
-
         logits = self.output2logits(pooled_output, seq_output, input_ids)
 
-        outputs = (logits,) + outputs[1:]
-
-        loss = self.loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
-
-        outputs = (loss,) + outputs
-
-        return outputs
+        return self.calc_loss(logits, outputs, labels)
 
 
 class LongFormerForRelationIdentification(LongformerForSequenceClassification, BaseModel):
@@ -293,13 +260,45 @@ class LongFormerForRelationIdentification(LongformerForSequenceClassification, B
 
         pooled_output = outputs[1]
         seq_output = outputs[0]
-
         logits = self.output2logits(pooled_output, seq_output, input_ids)
 
-        outputs = (logits,) + outputs[2:]
+        return self.calc_loss(logits, outputs, labels)
 
-        loss = self.loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
 
-        outputs = (loss,) + outputs
+class DebertaForRelationIdentification(DebertaForSequenceClassification, BaseModel):
+    def __init__(self, config):
+        from model_utils import ContextPooler
+        super().__init__(config)
+        self.deberta = DebertaModel(config)
+        self.pooler = ContextPooler(config)
 
-        return outputs
+        self.init_weights()
+
+    def forward(
+            self,
+            input_ids=None,
+            attention_mask=None,
+            token_type_ids=None,
+            position_ids=None,
+            inputs_embeds=None,
+            labels=None,
+            output_attentions=None,
+            output_hidden_states=None,
+            return_dict=None,
+    ):
+        outputs = self.deberta(
+            input_ids,
+            token_type_ids=token_type_ids,
+            attention_mask=attention_mask,
+            position_ids=position_ids,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+
+        seq_output = outputs[0]
+        pooled_output = self.pooler(seq_output)
+        logits = self.output2logits(pooled_output, seq_output, input_ids)
+
+        return self.calc_loss(logits, outputs, labels)

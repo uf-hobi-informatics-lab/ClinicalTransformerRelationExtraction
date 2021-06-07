@@ -76,7 +76,7 @@ class TaskRunner(object):
         # create data loader
         self.args.logger.info("start training...")
         tr_loss = .0
-        t_step = 0
+        t_step = 1
         latest_best_score = .0
 
         epoch_iter = trange(self.args.num_train_epochs, desc="Epoch", disable=not self.args.progress_bar)
@@ -203,9 +203,11 @@ class TaskRunner(object):
         self.idx2label = idx2label
         self.config = config.from_pretrained(self.args.pretrained_model, num_labels=num_labels)
         # The number of tokens to cache.
-        # he key/value pairs that have already been pre-computed in a previous forward pass won’t be re-computed.
+        # The key/value pairs that have already been pre-computed in a previous forward pass won’t be re-computed.
         if self.args.model_type == "xlnet":
             self.config.mem_len = self.config.d_model
+            # change dropout name
+            self.config.hidden_dropout_prob = self.config.dropout
         self.config.tags = spec_token_new_ids
         self.config.scheme = self.args.classification_scheme
 
