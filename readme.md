@@ -143,6 +143,20 @@ python src/data_processing/post_processing.py \
 		--brat_result_output_dir ./brat_output
 ```
 
+
+## Using json file for experiment config instead of commend line
+
+- to simplify using the package, we support using json file for configuration
+- using json, you can define all parameters in a separate json file instead of input via commend line
+- config_experiment_sample.json is a sample json file you can follow to develop yours
+- to run experiment with json config, you need to follow run_json.sh
+```shell script
+export CUDA_VISIBLE_DEVICES=1
+
+python ./src/relation_extraction_json.py \
+		--config_json "./config_experiment_sample.json"
+```
+
 ## Issues
 raise an issue if you have problems. 
 
