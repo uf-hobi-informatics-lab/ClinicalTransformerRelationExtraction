@@ -139,5 +139,5 @@ if __name__ == '__main__':
 
     # other setup
     args.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    args.logger = TransformerLogger(logger_file=args.log_file, logger_level='i').get_logger()
+    args.logger = TransformerLogger(logger_file=args.log_file, logger_level=args.log_lvl).get_logger()
     app(args)

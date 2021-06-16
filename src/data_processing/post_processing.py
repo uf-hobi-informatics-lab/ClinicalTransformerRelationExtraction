@@ -14,6 +14,8 @@ import numpy as np
 from io_utils import load_text, save_text, pkl_load
 from collections import defaultdict
 from data_format_conf import NON_RELATION_TAG, BRAT_REL_TEMPLATE
+from utils import TransformerLogger
+import traceback
 
 
 def load_mappings(map_file):
@@ -133,18 +135,34 @@ def combine_maps_predictions_bin(args):
 def app(args):
     lltf = len(args.test_data_file)
     llpf = len(args.predict_result_file)
-    assert lltf == llpf, \
-        f"test and prediction file number should be same but get test: {lltf} and preduction {llpf}."
+
+    args.logger.info("mode: {}; predict file: {}; output: {}".format(
+        args.mode,
+        args.predict_result_file,
+        args.brat_result_output_dir
+    ))
+
+    try:
+        assert lltf == llpf
+    except AssertionError as ex:
+        args.logger.error(
+            f"test and prediction file number should be same but get test: {lltf} and preduction {llpf}.")
+        raise RuntimeError(
+            f"test and prediction file number should be same but get test: {lltf} and preduction {llpf}.")
 
     if args.mode == "mul":
         combined_results = combine_maps_predictions_mul(args)
     elif args.mode == "bin":
         combined_results = combine_maps_predictions_bin(args)
     else:
+        args.logger.error("expect mode to be mul or bin but get {}".format(args.mode))
         raise RuntimeError("expect mode to be mul or bin but get {}".format(args.mode))
-    
-    combined_results = map_results(combined_results)
-    output_results(combined_results, args.entity_data_dir, args.brat_result_output_dir)
+
+    try:
+        combined_results = map_results(combined_results)
+        output_results(combined_results, args.entity_data_dir, args.brat_result_output_dir)
+    except Exception as ex:
+        args.logger.error(traceback.print_exc())
 
 
 if __name__ == '__main__':
@@ -179,6 +197,11 @@ if __name__ == '__main__':
                         help="prediction results; available to accept multiple files")
     parser.add_argument("--brat_result_output_dir", type=str, required=True,
                         help="prediction results")
+    parser.add_argument("--log_file", default="./log.txt",
+                        help="where to save the log information")
     pargs = parser.parse_args()
+
+    pargs.logger = TransformerLogger(logger_file=pargs.log_file,
+                                     logger_level='i').get_logger()
 
     app(pargs)
