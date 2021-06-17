@@ -76,7 +76,7 @@ class BaseModel(PreTrainedModel):
     def calc_loss(self, logits, outputs, labels):
         new_outputs = (logits,) + outputs[2:]
         loss = self.loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
-        new_outputs = (loss,) + outputs
+        new_outputs = (loss,) + new_outputs
 
         return new_outputs
 

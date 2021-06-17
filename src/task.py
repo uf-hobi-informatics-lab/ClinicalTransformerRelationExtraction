@@ -64,6 +64,7 @@ class TaskRunner(object):
         # load data
         self.data_processor.set_tokenizer(self.tokenizer)
         self.data_processor.set_tokenizer_type(self.args.model_type)
+        self.args.logger.info("data loader info: {}".format(self.data_processor))
         self._init_dataloader()
 
         if self.args.do_train:

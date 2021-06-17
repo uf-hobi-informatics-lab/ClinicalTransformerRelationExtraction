@@ -146,7 +146,7 @@ def batch_to_model_input(batch, model_type="bert", device=torch.device("cpu")):
 class DataProcessor(object):
     """Base class for data converters for sequence classification data sets."""
 
-    def __init__(self, data_dir=None, max_seq_len=128, num_core=-1, header=True, tokenizer_type='bert'):
+    def __init__(self, data_dir=None, max_seq_len=128, num_core=1, header=True, tokenizer_type='bert'):
         if data_dir:
             self.data_dir = Path(data_dir)
         else:
@@ -158,6 +158,10 @@ class DataProcessor(object):
         self.header = header
         self.tokenizer_type = tokenizer_type
         self.total_special_token_num = 3
+
+    def __str__(self):
+        rep = [f"key: {k}; val: {v}" for k, v in self.__dict__.items()]
+        return "\n".join(rep)
 
     def set_data_dir(self, data_dir):
         self.data_dir = Path(data_dir)
@@ -175,7 +179,7 @@ class DataProcessor(object):
         self.num_core = num_core
 
     def set_header(self, header):
-        self.num_core = header
+        self.header = header
 
     def get_train_examples(self, filename=None):
         """See base class."""

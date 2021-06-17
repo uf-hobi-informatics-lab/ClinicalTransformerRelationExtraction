@@ -14,8 +14,13 @@ import numpy as np
 from io_utils import load_text, save_text, pkl_load
 from collections import defaultdict
 from data_format_conf import NON_RELATION_TAG, BRAT_REL_TEMPLATE
-from utils import TransformerLogger
 import traceback
+
+# import logger from upper level dir
+import os
+import sys
+sys.path.append(Path(os.path.abspath(__file__)).parent.parent.as_posix())
+from utils import TransformerLogger
 
 
 def load_mappings(map_file):
@@ -185,7 +190,7 @@ if __name__ == '__main__':
         example:
             (ADE, Drug): Drug-ADE
     """
-    parser.add_argument("--mode", type=str, default='mul', required=True, 
+    parser.add_argument("--mode", type=str, default='mul', required=True,
                         help="we have two mode for binary (bin) and multiple (mul) classes classification")
     parser.add_argument("--type_map", type=str, default=None,
                         help="a map of entity pair types to relation types (only use when mode is bin)")

@@ -122,7 +122,7 @@ if __name__ == '__main__':
                         help="d=DEBUG; i=INFO; w=WARNING; e=ERROR")
     parser.add_argument("--log_step", default=1000, type=int,
                         help="logging after how many steps of training. If < 0, no log during training")
-    parser.add_argument("--num_core", default=-1, type=int,
+    parser.add_argument("--num_core", default=1, type=int,
                         help="how many cores used for multiple process for data generation")
     parser.add_argument("--non_relation_label", default="NonRel", type=str,
                         help="The label used for representing "
