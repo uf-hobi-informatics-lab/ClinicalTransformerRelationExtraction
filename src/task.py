@@ -264,7 +264,7 @@ class TaskRunner(object):
         self.model = model.from_pretrained(latest_ckpt_dir, config=self.config)
 
         # load label2idx
-        self.label2idx, self.idx2label = pkl_load(Path(self.args.new_model_dir)/"label_index.pkl")
+        self.label2idx, self.idx2label = pkl_load(latest_ckpt_dir/"label_index.pkl")
         # load model to device
         self.model.to(self.args.device)
 
