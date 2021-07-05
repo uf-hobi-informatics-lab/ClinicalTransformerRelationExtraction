@@ -159,6 +159,13 @@ python ./src/relation_extraction_json.py \
 		--config_json "./config_experiment_sample.json"
 ```
 
+## Baseline (baseline directory)
+- We also implemented some baselines for relation extraction using machine learning approaches
+- baseline is for comparison only
+- baseline based on SVM
+- features extracted may not optimize for each dataset (cover most commonly used lexical and semantic features)
+- see baseline/run.sh for example
+
 ## Issues
 raise an issue if you have problems. 
 

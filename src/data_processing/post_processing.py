@@ -12,15 +12,14 @@ import argparse
 from pathlib import Path
 import numpy as np
 from io_utils import load_text, save_text, pkl_load
+from utils import TransformerLogger
 from collections import defaultdict
 from data_format_conf import NON_RELATION_TAG, BRAT_REL_TEMPLATE
 import traceback
-
 # import logger from upper level dir
 import os
 import sys
 sys.path.append(Path(os.path.abspath(__file__)).parent.parent.as_posix())
-from utils import TransformerLogger
 
 
 def load_mappings(map_file):
@@ -197,7 +196,7 @@ if __name__ == '__main__':
     parser.add_argument("--test_data_file", type=str, nargs='+', required=True,
                         help="The test data file in which we need to read the maps; available to accept multiple files")
     parser.add_argument("--entity_data_dir", type=str, required=True,
-                        help="The annotation files with all the entities")
+                        help="The annotation/NER output files with only the entities. Used for output NER and RE.")
     parser.add_argument("--predict_result_file", nargs='+', type=str, required=True,
                         help="prediction results; available to accept multiple files")
     parser.add_argument("--brat_result_output_dir", type=str, required=True,
