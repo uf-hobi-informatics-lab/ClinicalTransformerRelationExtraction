@@ -8,18 +8,20 @@ We will automatically align the predictions to entity pairs and file ids
 The results will be write out with the entity information into a new file
 We will not copy the original text to the results output dir
 """
-import argparse
-from pathlib import Path
-import numpy as np
-from io_utils import load_text, save_text, pkl_load
-from utils import TransformerLogger
-from collections import defaultdict
-from data_format_conf import NON_RELATION_TAG, BRAT_REL_TEMPLATE
-import traceback
 # import logger from upper level dir
 import os
 import sys
+from pathlib import Path
+
+import argparse
+import numpy as np
+from io_utils import load_text, save_text, pkl_load
+from collections import defaultdict
+from data_format_conf import NON_RELATION_TAG, BRAT_REL_TEMPLATE
+import traceback
+
 sys.path.append(Path(os.path.abspath(__file__)).parent.parent.as_posix())
+from utils import TransformerLogger
 
 
 def load_mappings(map_file):
@@ -90,7 +92,7 @@ def combine_maps_predictions_mul(args):
         assert llp == llm, \
             f"prediction results and mappings should have same amount data, but got preds: {llp} and maps: {llm}"
         for m, rel_type in zip(maps, preds):
-            if rel_type == NON_RELATION_TAG:
+            if rel_type == args.neg_type:
                 continue
             arg1, arg2, fid = m
             comb_map_pred.append((fid, rel_type, arg1, arg2))
@@ -126,7 +128,7 @@ def combine_maps_predictions_bin(args):
         assert llp == llm, \
             f"prediction results and mappings should have same amount data, but got preds: {llp} and maps: {llm}"
         for m, rel_type in zip(maps, preds):
-            if rel_type == NON_RELATION_TAG:
+            if rel_type == args.neg_type:
                 continue
             en_type_1, en_type_2, arg1, arg2, fid = m
             real_rel_type = type_maps[(en_type_1, en_type_2)]
@@ -139,6 +141,9 @@ def combine_maps_predictions_bin(args):
 def app(args):
     lltf = len(args.test_data_file)
     llpf = len(args.predict_result_file)
+
+    if not args.neg_type:
+        args.neg_type = NON_RELATION_TAG
 
     args.logger.info("mode: {}; predict file: {}; output: {}".format(
         args.mode,
@@ -191,6 +196,8 @@ if __name__ == '__main__':
     """
     parser.add_argument("--mode", type=str, default='mul', required=True,
                         help="we have two mode for binary (bin) and multiple (mul) classes classification")
+    parser.add_argument("--neg_type", type=str, default=None,
+                        help="the type used for representing non-relation.")
     parser.add_argument("--type_map", type=str, default=None,
                         help="a map of entity pair types to relation types (only use when mode is bin)")
     parser.add_argument("--test_data_file", type=str, nargs='+', required=True,
@@ -201,7 +208,7 @@ if __name__ == '__main__':
                         help="prediction results; available to accept multiple files")
     parser.add_argument("--brat_result_output_dir", type=str, required=True,
                         help="prediction results")
-    parser.add_argument("--log_file", default="./log.txt",
+    parser.add_argument("--log_file", default="./log.txt", type=str,
                         help="where to save the log information")
     pargs = parser.parse_args()
 

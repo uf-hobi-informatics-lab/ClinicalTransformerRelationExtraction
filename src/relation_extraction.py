@@ -23,10 +23,13 @@ def check_args(args):
                            "You may want to use do_predict instead.")
 
     if args.max_num_checkpoints > 0 and not args.do_eval:
-        raise RuntimeError("Evaluation mode (do_eval) should be set in order to save more than one models."
-                           "We will evaluate at the end of each epoch and save models with better F1-score."
-                           "if do_eval is not set, we will only save one model at the end of training,"
-                           "in this case you have to set max_num_checkpoints=0 (default)")
+        warnings.warn("Evaluation mode (do_eval) should be set in order to save more than one models."
+                        "We will evaluate at the end of each epoch and save models with better F1-score."
+                        "if do_eval is not set, we will only save one model at the end of training,"
+                        "in this case you have to set max_num_checkpoints=0 (default),"
+                        "We did this for you by setting max_num_checkpoints=0"
+                      )
+        args.max_num_checkpoints = 0
 
     if args.do_eval and args.max_num_checkpoints < 1:
         warnings.warn("You set the eval mode so we expect max_num_checkpoints large than 0 so we set it to 1.")
