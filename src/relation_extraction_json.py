@@ -46,6 +46,9 @@ class Args:
         self.progress_bar = True
         self.fp16 = False
         self.fp16_opt_level = "O1"
+        self.use_focal_loss = False
+        self.focal_loss_gamma = 2
+        self.use_binary_classification_mode = False
 
         self.__update_args(**kwargs)
 

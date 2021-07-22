@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from torch.nn import CrossEntropyLoss
+from torch.nn import CrossEntropyLoss, BCEWithLogitsLoss
 from utils import TransformerLogger
 from transformers.modeling_utils import SequenceSummary
 from transformers import (BertForSequenceClassification, BertModel,
@@ -10,7 +10,7 @@ from transformers import (BertForSequenceClassification, BertModel,
                           LongformerForSequenceClassification, LongformerModel,
                           DebertaForSequenceClassification, DebertaModel,
                           PreTrainedModel)
-from model_utils import StableDropout
+from model_utils import StableDropout, FocalLoss, BinaryFocalLoss
 
 
 logger = TransformerLogger(logger_level='i').get_logger()
@@ -24,7 +24,17 @@ class BaseModel(PreTrainedModel):
         self.spec_tag1, self.spec_tag2, self.spec_tag3, self.spec_tag4 = config.tags
         self.scheme = config.scheme
         self.num_labels = config.num_labels
-        self.loss_fct = CrossEntropyLoss()
+
+        if config.use_focal_loss:
+            if config.binary_mode:
+                self.loss_fct = BinaryFocalLoss(gamma=config.focal_loss_gamma)
+            else:
+                self.loss_fct = FocalLoss(gamma=config.focal_loss_gamma)
+        else:
+            if config.binary_mode:
+                self.loss_fct = BCEWithLogitsLoss()
+            else:
+                self.loss_fct = CrossEntropyLoss()
 
         self.drop_out = StableDropout(config.hidden_dropout_prob)
 

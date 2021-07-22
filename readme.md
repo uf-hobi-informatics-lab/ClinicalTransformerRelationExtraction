@@ -172,7 +172,8 @@ raise an issue if you have problems.
 ## Citation
 please cite our paper:
 ```
-
+# We have a preprint at
+https://arxiv.org/abs/2107.08957
 ```
 
 ## Clinical Pre-trained Transformer Models
