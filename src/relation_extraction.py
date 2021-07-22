@@ -23,10 +23,13 @@ def check_args(args):
                            "You may want to use do_predict instead.")
 
     if args.max_num_checkpoints > 0 and not args.do_eval:
-        raise RuntimeError("Evaluation mode (do_eval) should be set in order to save more than one models."
-                           "We will evaluate at the end of each epoch and save models with better F1-score."
-                           "if do_eval is not set, we will only save one model at the end of training,"
-                           "in this case you have to set max_num_checkpoints=0 (default)")
+        warnings.warn("Evaluation mode (do_eval) should be set in order to save more than one models."
+                        "We will evaluate at the end of each epoch and save models with better F1-score."
+                        "if do_eval is not set, we will only save one model at the end of training,"
+                        "in this case you have to set max_num_checkpoints=0 (default),"
+                        "We did this for you by setting max_num_checkpoints=0"
+                      )
+        args.max_num_checkpoints = 0
 
     if args.do_eval and args.max_num_checkpoints < 1:
         warnings.warn("You set the eval mode so we expect max_num_checkpoints large than 0 so we set it to 1.")
@@ -34,6 +37,11 @@ def check_args(args):
 
     if args.do_train and Path(args.new_model_dir).exists() and not args.overwrite_model_dir:
         raise RuntimeError("{} is exist and overwrite this dir is not permitted.".format(args.new_model_dir))
+
+    if args.use_binary_classification_mode:
+        line = "*" * 20
+        info = "You turn on the binary mode, make sure you use binary data format."
+        warnings.warn(f"{line}\n{info}\n{line}\n")
 
 
 def app(gargs):
@@ -148,6 +156,13 @@ if __name__ == '__main__':
     parser.add_argument("--fp16_opt_level", type=str, default="O1",
                         help="For fp16: Apex AMP optimization level selected in ['O0', 'O1', 'O2', and 'O3']."
                              "See details at https://nvidia.github.io/apex/amp.html")
+    parser.add_argument('--use_focal_loss', action='store_true',
+                        help="Whether to use focal loss function to replace cross entropy loss function")
+    parser.add_argument("--focal_loss_gamma", default=2, type=int,
+                        help="focussing parameter used in focal loss function")
+    parser.add_argument('--use_binary_classification_mode', action='store_true',
+                        help="if use this mode, we will use BCEWithLogitsLoss or binary focal loss functions.")
+
     # using pytorch ddp
     # parser.add_argument('--ddp', action='store_true',
     #                     help="Whether to use Distributed Data Parallel")

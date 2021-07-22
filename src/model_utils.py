@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+import torch.nn.functional as F
 import math
 
 
@@ -129,3 +130,49 @@ class ContextPooler(nn.Module):
     @property
     def output_dim(self):
         return self.config.hidden_size
+
+
+class FocalLoss(nn.Module):
+    def __init__(self, weight=None, gamma=2., reduction='mean'):
+        super(FocalLoss, self).__init__()
+        self.weight = weight
+        self.gamma = gamma
+        self.reduction = reduction
+
+    def forward(self, input_tensor, target_tensor):
+        log_prob = F.log_softmax(input_tensor, dim=-1)
+        prob = torch.exp(log_prob)
+        return F.nll_loss(
+            ((1 - prob) ** self.gamma) * log_prob,
+            target_tensor,
+            weight=self.weight,
+            reduction=self.reduction
+        )
+
+
+class BinaryFocalLoss(nn.Module):
+    # https://arxiv.org/abs/1708.02002
+    def __init__(self, alpha=-1, gamma=2., reduction='mean'):
+        super(BinaryFocalLoss, self).__init__()
+        self.alpha = alpha
+        self.gamma = gamma
+        self.reduction = reduction
+
+    def forward(self, inputs, targets):
+        p = torch.sigmoid(inputs)
+        ce_loss = F.binary_cross_entropy_with_logits(
+            inputs, targets, reduction="none"
+        )
+        p_t = p * targets + (1 - p) * (1 - targets)
+        loss = ce_loss * ((1 - p_t) ** self.gamma)
+
+        if self.alpha >= 0:
+            alpha_t = self.alpha * targets + (1 - self.alpha) * (1 - targets)
+            loss = alpha_t * loss
+
+        if self.reduction == "mean":
+            loss = loss.mean()
+        elif self.reduction == "sum":
+            loss = loss.sum()
+
+        return loss

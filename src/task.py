@@ -166,10 +166,8 @@ class TaskRunner(object):
         # this is done on dev
         true_labels = np.array([dev_fea.label for dev_fea in self.dev_features])
         preds, eval_loss = self._run_eval(self.dev_data_loader)
-        eval_res = acc_and_f1(labels=true_labels,
-                                 preds=preds,
-                                 label2idx=self.label2idx,
-                                 non_rel_label=non_rel_label)
+        eval_res = acc_and_f1(
+            labels=true_labels, preds=preds, label2idx=self.label2idx, non_rel_label=non_rel_label)
 
         return eval_res
 
@@ -211,7 +209,11 @@ class TaskRunner(object):
             self.config.hidden_dropout_prob = self.config.dropout
         self.config.tags = spec_token_new_ids
         self.config.scheme = self.args.classification_scheme
-
+        # binary mode
+        self.config.binary_mode = self.args.use_binary_classification_mode
+        # focal loss config
+        self.config.use_focal_loss = self.args.use_focal_loss
+        self.config.focal_loss_gamma = self.args.focal_loss_gamma
         # init model
         self.model = model.from_pretrained(self.args.pretrained_model, config=self.config)
         self.config.vocab_size = total_token_num
@@ -370,7 +372,11 @@ class TaskRunner(object):
                 output_mode="classification")
 
             self.train_data_loader = relation_extraction_data_loader(
-                train_features, batch_size=self.args.train_batch_size, task="train", logger=self.args.logger)
+                train_features,
+                batch_size=self.args.train_batch_size,
+                task="train",
+                logger=self.args.logger,
+                binary_mode=self.args.use_binary_classification_mode)
 
         if self.args.do_eval and self.dev_data_loader is None:
             dev_examples = self._check_cache(task="dev")
@@ -384,7 +390,11 @@ class TaskRunner(object):
             self.dev_features = dev_features
 
             self.dev_data_loader = relation_extraction_data_loader(
-                dev_features, batch_size=self.args.train_batch_size, task="test", logger=self.args.logger)
+                dev_features,
+                batch_size=self.args.train_batch_size,
+                task="test",
+                logger=self.args.logger,
+                binary_mode=self.args.use_binary_classification_mode)
 
         if self.args.do_predict and self.test_data_loader is None:
             test_examples = self._check_cache(task="test")
@@ -397,4 +407,7 @@ class TaskRunner(object):
                 output_mode="classification")
 
             self.test_data_loader = relation_extraction_data_loader(
-                test_features, batch_size=self.args.eval_batch_size, task="test", logger=self.args.logger)
+                test_features,
+                batch_size=self.args.eval_batch_size,
+                task="test", logger=self.args.logger,
+                binary_mode=self.args.use_binary_classification_mode)
