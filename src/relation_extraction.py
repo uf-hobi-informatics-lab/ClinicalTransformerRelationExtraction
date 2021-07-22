@@ -162,6 +162,8 @@ if __name__ == '__main__':
                         help="focussing parameter used in focal loss function")
     parser.add_argument('--use_binary_classification_mode', action='store_true',
                         help="if use this mode, we will use BCEWithLogitsLoss or binary focal loss functions.")
+    parser.add_argument('--balance_sample_weights', action='store_true',
+                        help="Whether to create sample weights and pass it to loss functions")
 
     # using pytorch ddp
     # parser.add_argument('--ddp', action='store_true',

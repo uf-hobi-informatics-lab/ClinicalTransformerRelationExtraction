@@ -36,5 +36,6 @@
   "fp16_opt_level": "O1",
   "use_focal_loss": false,
   "focal_loss_gamma": 2,
-  "use_binary_classification_mode": false
+  "use_binary_classification_mode": false,
+  "balance_sample_weights": false
 }

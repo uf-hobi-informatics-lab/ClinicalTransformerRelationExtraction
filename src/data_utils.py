@@ -9,6 +9,7 @@ from tqdm import tqdm
 from functools import partial
 from concurrent.futures import ProcessPoolExecutor
 import numpy as np
+from collections import Counter
 
 
 class InputExample(object):
@@ -205,6 +206,21 @@ class DataProcessor(object):
 
         return self._create_examples(
             self._read_tsv(input_file_name), "test")
+
+    def get_sample_distribution(self, train_file=None):
+        # the distribution will be measured based on training data
+        if train_file:
+            lines = self._read_tsv(train_file)
+        else:
+            lines = self._read_tsv(self.data_dir / "train.tsv")
+
+        labels = []
+        for (i, line) in enumerate(lines):
+            labels.append(line[0])
+        total = len(labels)
+        label2freq = {k: (1-v/total) for k, v in Counter(labels).items()}
+
+        return label2freq
 
     def get_labels(self, train_file=None, label_file=None):
         """
