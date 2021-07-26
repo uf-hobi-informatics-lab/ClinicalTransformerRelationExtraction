@@ -185,3 +185,4 @@ You can find them here:
 - https://transformer-models.s3.amazonaws.com/mimiciii_roberta_10e_128b.zip
 - https://transformer-models.s3.amazonaws.com/mimiciii_xlnet_5e_128b.zip
 - https://transformer-models.s3.amazonaws.com/mimiciii_deberta_10e_128b.tar.gz
+- https://transformer-models.s3.amazonaws.com/mimiciii_longformer_5e_128b.zip
