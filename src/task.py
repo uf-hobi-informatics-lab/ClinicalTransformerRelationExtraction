@@ -16,7 +16,7 @@ from tqdm import trange, tqdm
 import numpy as np
 from packaging import version
 from pathlib import Path
-from config import SPEC_TAGS, MODEL_DICT
+from config import SPEC_TAGS, MODEL_DICT, VERSION, NEW_ARGS, CONFIG_VERSION_NAME
 import shutil
 
 
@@ -202,6 +202,7 @@ class TaskRunner(object):
         self.idx2label = idx2label
 
         self.config = config.from_pretrained(self.args.pretrained_model, num_labels=num_labels)
+        self.config.update({CONFIG_VERSION_NAME: VERSION})
         # The number of tokens to cache.
         # The key/value pairs that have already been pre-computed in a previous forward pass won’t be re-computed.
         if self.args.model_type == "xlnet":
@@ -273,6 +274,10 @@ class TaskRunner(object):
         model, config, tokenizer = self.model_dict[self.args.model_type]
 
         self.config = config.from_pretrained(latest_ckpt_dir)
+        # compatibility check for config arguments
+        if not (self.config.to_dict().get(CONFIG_VERSION_NAME, None) == VERSION):
+            self.config.update(NEW_ARGS)
+
         self.tokenizer = tokenizer.from_pretrained(latest_ckpt_dir, do_lower_case=self.args.do_lower_case)
         self.model = model.from_pretrained(latest_ckpt_dir, config=self.config)
 

@@ -25,3 +25,13 @@ MODEL_DICT = {
 }
 
 TOKENIZER_USE_FOUR_SPECIAL_TOKs = {'roberta', 'longformer'}
+
+# change VERSION if any major updates
+VERSION = "0.1"
+CONFIG_VERSION_NAME = "REModelVersion"
+
+# add new args associated to version
+NEW_ARGS = {"use_focal_loss": False,
+            "focal_loss_gamma": 2,
+            "use_binary_classification_mode": False,
+            "balance_sample_weights": False}
