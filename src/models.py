@@ -10,7 +10,7 @@ from transformers import (BertForSequenceClassification, BertModel,
                           LongformerForSequenceClassification, LongformerModel,
                           DebertaForSequenceClassification, DebertaModel,
                           PreTrainedModel)
-from model_utils import StableDropout, FocalLoss, BinaryFocalLoss
+from model_utils import StableDropout, FocalLoss, BCEFocalLoss
 
 
 logger = TransformerLogger(logger_level='i').get_logger()
@@ -30,7 +30,7 @@ class BaseModel(PreTrainedModel):
         if config.use_focal_loss:
             # TODO: the sample weights need to be tuned for focal loss functions; we do not support currently
             if config.binary_mode:
-                self.loss_fct = BinaryFocalLoss(gamma=config.focal_loss_gamma)
+                self.loss_fct = BCEFocalLoss(gamma=config.focal_loss_gamma)
             else:
                 self.loss_fct = FocalLoss(gamma=config.focal_loss_gamma)
         else:
