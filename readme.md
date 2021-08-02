@@ -69,15 +69,16 @@ config.py
 
 - training
 > please refer to the wiki page for all details of the parameters
-> [flag details](https://github.com/uf-hobi-informatics-lab/ClinicalTransformerRelationExtraction/wiki/All-flags-explained-for-training-and-test)
+> [flag details](https://github.com/uf-hobi-informatics-lab/ClinicalTransformerRelationExtraction.wiki.git)
 
 ```shell script
 export CUDA_VISIBLE_DEVICES=1
 data_dir=./sample_data
-nmd=./new_model
+nmd=./new_modelzw
 pof=./predictions.txt
 log=./log.txt
 
+# NOTE: we have more options available, you can check our wiki for more information
 python ./src/relation_extraction.py \
 		--model_type bert \
 		--data_format_mode 0 \
