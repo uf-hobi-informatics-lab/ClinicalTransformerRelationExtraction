@@ -150,10 +150,10 @@ class FocalLoss(nn.Module):
         )
 
 
-class BinaryFocalLoss(nn.Module):
+class BCEFocalLoss(nn.Module):
     # https://arxiv.org/abs/1708.02002
     def __init__(self, alpha=-1, gamma=2., reduction='mean'):
-        super(BinaryFocalLoss, self).__init__()
+        super(BCEFocalLoss, self).__init__()
         self.alpha = alpha
         self.gamma = gamma
         self.reduction = reduction

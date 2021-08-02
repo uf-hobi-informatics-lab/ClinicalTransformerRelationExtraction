@@ -49,6 +49,7 @@ class Args:
         self.use_focal_loss = False
         self.focal_loss_gamma = 2
         self.use_binary_classification_mode = False
+        self.balance_sample_weights = False
 
         self.__update_args(**kwargs)
 

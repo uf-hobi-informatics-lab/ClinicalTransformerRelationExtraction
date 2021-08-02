@@ -200,6 +200,7 @@ class TaskRunner(object):
         num_labels = len(unique_labels)
         self.label2idx = label2idx
         self.idx2label = idx2label
+
         self.config = config.from_pretrained(self.args.pretrained_model, num_labels=num_labels)
         # The number of tokens to cache.
         # The key/value pairs that have already been pre-computed in a previous forward pass won’t be re-computed.
@@ -214,6 +215,16 @@ class TaskRunner(object):
         # focal loss config
         self.config.use_focal_loss = self.args.use_focal_loss
         self.config.focal_loss_gamma = self.args.focal_loss_gamma
+        # sample weights in loss functions
+        self.config.balance_sample_weights = self.args.balance_sample_weights
+        if self.args.balance_sample_weights:
+            label2freq = self.data_processor.get_sample_distribution()
+            label_id2freq = {label2idx[k]: v for k, v in label2freq.items()}
+            self.config.sample_weights = np.zeros(len(label2freq))
+            for k, v in label_id2freq.items():
+                self.config.sample_weights[k] = v
+            self.args.logger.info(
+                f"using sample weights: {label_id2freq} and converted weight matrix is {self.config.sample_weights}")
         # init model
         self.model = model.from_pretrained(self.args.pretrained_model, config=self.config)
         self.config.vocab_size = total_token_num
