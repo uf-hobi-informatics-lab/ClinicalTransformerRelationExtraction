@@ -5,7 +5,7 @@ import random
 from utils import TransformerLogger
 from task import TaskRunner
 from pathlib import Path
-from data_processing.io_utils import save_text
+from data_processing.io_utils import save_text, save_json
 import traceback
 import warnings
 
@@ -57,6 +57,9 @@ def app(gargs):
         # training
         try:
             task_runner.train()
+            # save the experiment arguments into a file under new model dir
+            save_json(vars(args), Path(gargs.new_model_dir)/"training_arguments.json")
+            Path(gargs.new_model_dir)
         except Exception as ex:
             gargs.logger.error("Training error:\n{}".format(traceback.format_exc()))
             traceback.print_exc()
@@ -164,7 +167,6 @@ if __name__ == '__main__':
                         help="if use this mode, we will use BCEWithLogitsLoss or binary focal loss functions.")
     parser.add_argument('--balance_sample_weights', action='store_true',
                         help="Whether to create sample weights and pass it to loss functions")
-
     # using pytorch ddp
     # parser.add_argument('--ddp', action='store_true',
     #                     help="Whether to use Distributed Data Parallel")

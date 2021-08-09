@@ -8,7 +8,7 @@ from data_utils import (features2tensors, relation_extraction_data_loader,
                         batch_to_model_input, RelationDataFormatSepProcessor,
                         RelationDataFormatUniProcessor)
 from utils import acc_and_f1
-from data_processing.io_utils import pkl_save, pkl_load
+from data_processing.io_utils import pkl_save, pkl_load, save_json
 from transformers import glue_convert_examples_to_features as convert_examples_to_relation_extraction_features
 from transformers import get_linear_schedule_with_warmup, get_cosine_schedule_with_warmup
 import torch
@@ -31,6 +31,8 @@ class TaskRunner(object):
         self.dev_data_loader = None
         self.test_data_loader = None
         self.data_processor = None
+        self.new_model_dir_path = Path(self.args.new_model_dir)
+        self.new_model_dir_path.mkdir(parents=True, exist_ok=True)
         self._use_amp_for_fp16_from = 0
 
     def task_runner_default_init(self):
@@ -197,6 +199,7 @@ class TaskRunner(object):
         # init config
         unique_labels, label2idx, idx2label = self.data_processor.get_labels()
         self.args.logger.info("label to index:\n{}".format(label2idx))
+        save_json(label2idx, self.new_model_dir_path/"label2idx.json")
         num_labels = len(unique_labels)
         self.label2idx = label2idx
         self.idx2label = idx2label
@@ -265,8 +268,7 @@ class TaskRunner(object):
 
     def _init_trained_model(self):
         """initialize a fine-tuned model for prediction"""
-        p = Path(self.args.new_model_dir)
-        dir_list = [d for d in p.iterdir() if d.is_dir()]
+        dir_list = [d for d in self.new_model_dir_path.iterdir() if d.is_dir()]
         latest_ckpt_dir = sorted(dir_list, key=lambda x: int(x.stem.split("_")[-1]))[-1]
 
         self.args.logger.info("Init model from {} for prediction".format(latest_ckpt_dir))
@@ -303,9 +305,7 @@ class TaskRunner(object):
                 self.args.fp16 = False
 
     def _save_model(self, epoch=0):
-        p = Path(self.args.new_model_dir)
-        p.mkdir(parents=True, exist_ok=True)
-        dir_to_save = p / f"ckpt_{epoch}"
+        dir_to_save = self.new_model_dir_path / f"ckpt_{epoch}"
 
         self.tokenizer.save_pretrained(dir_to_save)
         self.config.save_pretrained(dir_to_save)
@@ -375,6 +375,19 @@ class TaskRunner(object):
                                   "the processed data will not be cached")
             examples = self._load_examples_by_task(task)
         return examples
+
+    def reset_dataloader(self, data_dir, has_file_header=None, max_len=None):
+        """
+          allow reset data dir and data file header and max seq len
+        """
+        self.data_processor.set_data_dir(data_dir)
+        if has_file_header:
+            self.data_processor.set_header(has_file_header)
+        if max_len and isinstance(max_len, int) and 0 < max_len <= 512:
+            self.data_processor.set_max_seq_len(max_len)
+        self.args.logger.warning("reset data loader information")
+        self.args.logger.warning("new data loader info: {}".format(self.data_processor))
+        self._init_dataloader()
 
     def _init_dataloader(self):
         if self.args.do_train and self.train_data_loader is None:
