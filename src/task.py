@@ -313,7 +313,7 @@ class TaskRunner(object):
         # save label2idx
         pkl_save((self.label2idx, self.idx2label), dir_to_save/"label_index.pkl")
         # remove extra checkpoints
-        dir_list = [d for d in p.iterdir() if d.is_dir()]
+        dir_list = [d for d in self.new_model_dir_path.iterdir() if d.is_dir()]
         if len(dir_list) > self.args.max_num_checkpoints > 0:
             oldest_ckpt_dir = sorted(dir_list, key=lambda x: int(x.stem.split("_")[-1]))[0]
             shutil.rmtree(oldest_ckpt_dir)
