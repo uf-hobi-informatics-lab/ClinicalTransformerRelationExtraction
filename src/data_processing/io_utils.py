@@ -32,4 +32,4 @@ def load_json(file):
 
 def save_json(data, file):
     with open(file, "w") as f:
-        json.dump(data, f)
+        json.dump(data, f, indent=2)

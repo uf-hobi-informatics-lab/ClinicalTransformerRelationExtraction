@@ -25,7 +25,7 @@ class BaseModel(PreTrainedModel):
         self.scheme = config.scheme
         self.num_labels = config.num_labels
         sample_weights = config.sample_weights if config.balance_sample_weights else None
-        sample_weights = torch.tensor(sample_weights, dtype=torch.float32)
+        sample_weights = torch.tensor(sample_weights, dtype=torch.float32) if sample_weights else None
 
         if config.use_focal_loss:
             # TODO: the sample weights need to be tuned for focal loss functions; we do not support currently

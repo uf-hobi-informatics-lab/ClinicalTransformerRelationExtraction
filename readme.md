@@ -22,6 +22,10 @@ We only support train-dev mode, but you can do 5-fold CV.
 > We will keep adding new models.
 
 ## usage and example
+- prerequisite
+> The package is only for relation extraction, thus the entities must be provided. 
+> You have to conduction NER first to get all entities then run this package to get the end-to-end relation extraction results
+
 - data format
 > see sample_data dir (train.tsv and test.tsv) for the train and test data format
 
@@ -69,7 +73,7 @@ config.py
 
 - training
 > please refer to the wiki page for all details of the parameters
-> [flag details](https://github.com/uf-hobi-informatics-lab/ClinicalTransformerRelationExtraction.wiki.git)
+> [flag details](https://github.com/uf-hobi-informatics-lab/ClinicalTransformerRelationExtraction/wiki/all-parameters)
 
 ```shell script
 export CUDA_VISIBLE_DEVICES=1
@@ -159,6 +163,10 @@ export CUDA_VISIBLE_DEVICES=1
 python ./src/relation_extraction_json.py \
 		--config_json "./config_experiment_sample.json"
 ```
+
+## Inference on a large corpus
+- If you have a model and need to run inference on a large corpus, we can refer to **batch_prediction.py**
+- We also have the preprocessing notebook for batch_prediction.py in /data_preprocessing
 
 ## Baseline (baseline directory)
 - We also implemented some baselines for relation extraction using machine learning approaches
