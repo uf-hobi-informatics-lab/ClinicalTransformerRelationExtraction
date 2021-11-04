@@ -74,10 +74,10 @@ class Args:
         self.model_type = "deberta"
         self.data_format_mode = 0
         self.classification_scheme = 2
-        self.pretrained_model = "microsoft/deberta-base" # microsoft/deberta-large; microsoft/deberta-xlarge
+        self.pretrained_model = "microsoft/deberta-base"  # microsoft/deberta-large; microsoft/deberta-xlarge
         self.data_dir = "../sample_data"
-        self.new_model_dir = "../deberta_re_model"
-        self.predict_output_file = "../deberta_re_predict.txt"
+        self.new_model_dir = "../temp/deberta_re_model"
+        self.predict_output_file = "../temp/deberta_re_predict.txt"
         self.overwrite_model_dir = True
         self.seed = 1234
         self.max_seq_length = 128
@@ -108,7 +108,7 @@ class Args:
         self.fp16_opt_level = "O1"
         self.use_focal_loss = False
         self.focal_loss_gamma = 2
-        self.use_binary_classification_mode = True
+        self.use_binary_classification_mode = False
         self.balance_sample_weights = False
 
         self.__update_args(**kwargs)
