@@ -24,17 +24,21 @@ class BaseModel(PreTrainedModel):
         self.spec_tag1, self.spec_tag2, self.spec_tag3, self.spec_tag4 = config.tags
         self.scheme = config.scheme
         self.num_labels = config.num_labels
-        sample_weights = config.sample_weights if config.balance_sample_weights else None
-        sample_weights = torch.tensor(sample_weights, dtype=torch.float32) if sample_weights else None
 
-        if config.use_focal_loss:
+        if hasattr(config, 'balance_sample_weights'):
+            sample_weights = config.sample_weights if config.balance_sample_weights else None
+            sample_weights = torch.tensor(sample_weights, dtype=torch.float32) if sample_weights else None
+        else:
+            sample_weights = None
+
+        if hasattr(config, 'use_focal_loss') and config.use_focal_loss:
             # TODO: the sample weights need to be tuned for focal loss functions; we do not support currently
             if config.binary_mode:
                 self.loss_fct = BCEFocalLoss(gamma=config.focal_loss_gamma)
             else:
                 self.loss_fct = FocalLoss(gamma=config.focal_loss_gamma)
         else:
-            if config.binary_mode:
+            if hasattr(config, 'binary_mode') and config.binary_mode:
                 self.loss_fct = BCEWithLogitsLoss(weight=sample_weights)
             else:
                 self.loss_fct = CrossEntropyLoss(weight=sample_weights)
