@@ -335,7 +335,10 @@ class TaskRunner(object):
                 loss, logits = batch_output[:2]
                 temp_loss += loss.item()
                 logits = logits.detach().cpu().numpy()
-                preds = logits if preds is None else np.append(preds, logits, axis=0)
+                if preds is None:
+                    preds = logits
+                else:
+                    preds = np.append(preds, logits, axis=0)
 
         batch_iter.close()
         temp_loss = temp_loss / total_sample_num

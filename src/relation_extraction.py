@@ -57,9 +57,6 @@ def app(gargs):
         # training
         try:
             task_runner.train()
-            # save the experiment arguments into a file under new model dir
-            save_json(vars(args), Path(gargs.new_model_dir)/"training_arguments.json")
-            Path(gargs.new_model_dir)
         except Exception as ex:
             gargs.logger.error("Training error:\n{}".format(traceback.format_exc()))
             traceback.print_exc()
@@ -174,6 +171,9 @@ if __name__ == '__main__':
     #                     help="local rank ID")
 
     args = parser.parse_args()
+    # save the experiment arguments into a file under new model dir
+    Path(args.new_model_dir).mkdir(exist_ok=True, parents=True)
+    save_json(vars(args), Path(args.new_model_dir) / "training_arguments.json")
 
     # other setup
     args.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
