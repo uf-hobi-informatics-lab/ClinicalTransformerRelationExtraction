@@ -260,16 +260,22 @@ class DataProcessor(object):
     @staticmethod
     def _read_tsv(input_file, header=True, quotechar=None):
         """Reads a tab separated value file."""
-        lines = []
+        # # implemented with csv reader -> deprecate due to artifacts
+        # lines = []
+        # with open(input_file, "r", encoding="utf-8") as f:
+        #     reader = csv.reader(f, delimiter="\t", quotechar=quotechar)
+        #     for line in reader:
+        #         lines.append(line)
+        # if header:
+        #     lines = lines[1:]
+        #
+        # return lines
 
         with open(input_file, "r", encoding="utf-8") as f:
-            reader = csv.reader(f, delimiter="\t", quotechar=quotechar)
-            for line in reader:
-                lines.append(line)
-        if header:
-            lines = lines[1:]
-
-        return lines
+            lines = f.readlines()
+            if header:
+                lines = lines[1:]
+            return [line.split("\t") for line in lines]
 
 
 class RelationDataFormatSepProcessor(DataProcessor):

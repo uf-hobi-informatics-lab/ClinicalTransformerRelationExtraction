@@ -140,16 +140,15 @@ class TaskRunner(object):
 
             # at each epoch end, we do eval on dev
             if self.args.do_eval:
-                acc, prf, f1 = self.eval(self.args.non_relation_label)
+                acc, pr, f1 = self.eval(self.args.non_relation_label)
                 self.args.logger.info("""
                 ******************************
                 Epcoh: {}
                 evaluation on dev set
                 acc: {}
-                precision, recall, f1:
-                {}
+                {}; f1:{}
                 ******************************
-                """.format(epoch+1, acc, prf))
+                """.format(epoch+1, acc, pr, f1))
                 # max_num_checkpoints > 0, save based on eval
                 # save model
                 if self.args.max_num_checkpoints > 0 and latest_best_score < f1:

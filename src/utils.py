@@ -1,5 +1,5 @@
 import logging
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 import traceback
 from collections import defaultdict
 
@@ -120,13 +120,8 @@ def measure_prf(preds, gs_labels, non_rel_label):
 def acc_and_f1(labels, preds, label2idx, non_rel_label):
     acc = accuracy_score(labels, preds)
 
-    idx2label = {v: k for k, v in label2idx.items()}
-    new_labels = [idx2label[e] for e in labels]
-    new_preds = [idx2label[e] for e in preds]
-    prf_list, f1 = measure_prf(new_preds, new_labels, non_rel_label)
-    prf_list = sorted(prf_list.items(), key=lambda x: len(x[0]))
-    res = []
-    for k, v in prf_list:
-        res.append(f"{k} - pre: {v[0]}, rec: {v[1]}, f1: {v[2]}")
+    includes = [i for l, i in label2idx.items() if l != non_rel_label]
 
-    return acc, "\n".join(res), f1
+    p, r, f1, _ = precision_recall_fscore_support(labels, preds, labels=includes, average="micro")
+
+    return acc, f"precision: {p}; recall: {r}", f1
