@@ -84,7 +84,7 @@ class Args:
         self.cache_data = False
         self.data_file_header = True
         self.do_train = True
-        self.do_eval = False
+        self.do_eval = True
         self.do_predict = True
         self.do_lower_case = True
         self.train_batch_size = 2
