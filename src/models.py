@@ -9,6 +9,7 @@ from transformers import (BertForSequenceClassification, BertModel,
                           AlbertForSequenceClassification, AlbertModel,
                           LongformerForSequenceClassification, LongformerModel,
                           DebertaForSequenceClassification, DebertaModel,
+                          MegatronBertForSequenceClassification, MegatronBertModel,
                           PreTrainedModel)
 from model_utils import StableDropout, FocalLoss, BCEFocalLoss
 
@@ -316,6 +317,38 @@ class DebertaForRelationIdentification(DebertaForSequenceClassification, BaseMod
 
         seq_output = outputs[0]
         pooled_output = self.pooler(seq_output)
+        logits = self.output2logits(pooled_output, seq_output, input_ids)
+
+        return self.calc_loss(logits, outputs, labels)
+
+
+class MegatronForRelationIdentification(MegatronBertForSequenceClassification, BaseModel):
+    def __init__(self, config):
+        super().__init__(config)
+        self.megatron = MegatronBertModel(config)
+        self.init_weights()
+
+    def forward(self,
+                input_ids=None,
+                attention_mask=None,
+                token_type_ids=None,
+                position_ids=None,
+                head_mask=None,
+                inputs_embeds=None,
+                labels=None,
+                output_attentions=None,
+                **kwargs):
+
+        outputs = self.megatron(
+            input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            head_mask=head_mask
+        )
+
+        pooled_output = outputs[1]
+        seq_output = outputs[0]
         logits = self.output2logits(pooled_output, seq_output, input_ids)
 
         return self.calc_loss(logits, outputs, labels)

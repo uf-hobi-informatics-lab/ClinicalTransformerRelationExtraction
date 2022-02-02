@@ -81,13 +81,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     # parse arguments
     parser.add_argument("--model_type", default='bert', type=str, required=True,
-                        help="valid values: bert, roberta, albert or xlnet")
+                        help="valid values: bert, roberta, albert, xlnet, megatron, deberta, longformer")
     parser.add_argument("--data_format_mode", default=0, type=int,
                         help="valid values: 0: sep mode - [CLS]S1[SEP]S2[SEP]; 1: uni mode - [CLS]S1S2[SEP]")
     parser.add_argument("--classification_scheme", default=2, type=int,
                         help="special tokens used for classification. "
                              "Valid values: "
-                             "0: [CLS]; 1: [CLS], [S1], [S2]; 2: [CLS], [S1], [S2], [E1], [E2]; 3: [S1], [S2]")
+                             "0: [CLS]; 1: [CLS], [S1], [S2]; 2: [CLS], [S1], [E1], [S2], [E2]; 3: [S1], [S2]")
     parser.add_argument("--pretrained_model", type=str,
                         help="The pretrained model file or directory for fine tuning.")
     parser.add_argument("--data_dir", type=str, required=True,
