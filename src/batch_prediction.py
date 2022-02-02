@@ -83,7 +83,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     # parse arguments
     parser.add_argument("--model_type", default='bert', type=str, required=True,
-                        help="valid values: bert, roberta, albert or xlnet")
+                        help="valid values: bert, roberta, albert, xlnet, megatron, deberta, longformer")
     parser.add_argument("--data_format_mode", default=0, type=int,
                         help="valid values: 0: sep mode - [CLS]S1[SEP]S2[SEP]; 1: uni mode - [CLS]S1S2[SEP]")
     parser.add_argument("--data_dir", type=str, required=True,
@@ -94,7 +94,7 @@ if __name__ == '__main__':
                         help="predicted results output file.")
     parser.add_argument("--max_seq_length", default=512, type=int,
                         help="maximum number of tokens allowed in each sentence")
-    parser.add_argument("--data_file_header", default=True, type=distutils.util.strtobool,
+    parser.add_argument("--data_file_header", default=True, type=bool,
                         help="flag used to define whether the data tsv file has header or not. "
                              "If has header, we will skip the first line")
     parser.add_argument("--do_lower_case", action='store_true',
