@@ -325,7 +325,7 @@ class DebertaForRelationIdentification(DebertaForSequenceClassification, BaseMod
 class MegatronForRelationIdentification(MegatronBertForSequenceClassification, BaseModel):
     def __init__(self, config):
         super().__init__(config)
-        self.megatron = MegatronBertModel(config)
+        self.bert = MegatronBertModel(config)
         self.init_weights()
 
     def forward(self,
@@ -339,7 +339,7 @@ class MegatronForRelationIdentification(MegatronBertForSequenceClassification, B
                 output_attentions=None,
                 **kwargs):
 
-        outputs = self.megatron(
+        outputs = self.bert(
             input_ids,
             attention_mask=attention_mask,
             token_type_ids=token_type_ids,
