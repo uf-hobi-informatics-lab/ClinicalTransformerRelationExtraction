@@ -385,10 +385,11 @@ class TaskRunner(object):
         self.data_processor.set_data_dir(data_dir)
         if has_file_header:
             self.data_processor.set_header(has_file_header)
-        if max_len and isinstance(max_len, int) and 0 < max_len <= 512:
+        if max_len and isinstance(max_len, int):
             self.data_processor.set_max_seq_len(max_len)
         self.args.logger.warning("reset data loader information")
         self.args.logger.warning("new data loader info: {}".format(self.data_processor))
+        self.test_data_loader = None
         self._init_dataloader()
 
     def _init_dataloader(self):
