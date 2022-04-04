@@ -48,12 +48,21 @@ def app(gargs):
     gargs.model_type = gargs.model_type.lower()
     gargs.progress_bar = False
     gargs.cache_data = False
+    gargs.do_train = False
+    gargs.do_eval = False
+    gargs.do_predict = True
+    gargs.use_binary_classification_mode = False
 
     task_runner = BatchRunner(gargs)
     # no data loader init, we init data loader in reset function during the loop
     task_runner.task_runner_batch_init()
 
-    for batch_id, each_batch_dir in enumerate(Path(gargs.data_dir).iterdir()):
+    for each_batch_dir in Path(gargs.data_dir).iterdir():
+        if not each_batch_dir.is_dir() or not each_batch_dir.name.startswith("batch"):
+            continue
+
+        batch_id = each_batch_dir.stem.split("_")[1]
+
         try:
             task_runner.reset_dataloader(each_batch_dir,
                                          has_file_header=gargs.data_file_header,
@@ -69,13 +78,13 @@ def app(gargs):
         # predict_output_file must be a file, we will create parent dir automatically
         p_pred = Path(gargs.predict_output_dir)
         p_pred.mkdir(parents=True, exist_ok=True)
-        save_text(pred_res, gargs.predict_output_dir/f"batch_{batch_id}_prediction.txt")
+        save_text(pred_res, p_pred / f"batch_{batch_id}_prediction.txt")
 
         # output to files
         gargs.mode = gargs.classification_mode
         gargs.neg_type = gargs.non_relation_label
-        gargs.predict_result_file = gargs.predict_output_dir/f"batch_{batch_id}_prediction.txt"
-        gargs.test_data_file = each_batch_dir / "test.tsv"
+        gargs.predict_result_file = [p_pred / f"batch_{batch_id}_prediction.txt"]
+        gargs.test_data_file = [each_batch_dir / "test.tsv"]
         post_processing(gargs)
 
 
