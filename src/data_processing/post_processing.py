@@ -79,7 +79,10 @@ def output_results(mapped_predictions, entity_data_dir, output_dir):
             outputs = "\n".join([entities, rels])
             save_text(outputs, ofn)
         else:
-            save_text(entities, ofn)
+            # only save when file is not exist
+            # this is important for batch prediction dur to multi rounds visiting same files
+            if not ofn.is_file():
+                save_text(entities, ofn)
 
 
 def combine_maps_predictions_mul(args):
@@ -172,7 +175,8 @@ def app(args):
         combined_results = map_results(combined_results)
         output_results(combined_results, args.entity_data_dir, args.brat_result_output_dir)
     except Exception as ex:
-        args.logger.error(traceback.print_exc())
+        traceback.print_exc()
+        args.logger.error(traceback.format_exc())
 
 
 if __name__ == '__main__':
