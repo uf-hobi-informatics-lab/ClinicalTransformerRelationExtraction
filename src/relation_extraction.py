@@ -1,3 +1,6 @@
+import sys, os
+sys.path.insert(0,'/home/jameshuang/repos/ClinicalTransformerRelationExtraction/src')
+sys.path.insert(0,os.path.dirname(__file__))
 import argparse
 import torch
 import numpy as np
@@ -48,6 +51,10 @@ def app(gargs):
     set_seed(gargs)
     check_args(gargs)
 
+    # other setup
+    gargs.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    gargs.logger = TransformerLogger(logger_file=gargs.log_file, logger_level=gargs.log_lvl).get_logger()
+    
     # make model type case in-sensitive
     gargs.model_type = gargs.model_type.lower()
     task_runner = TaskRunner(gargs)
@@ -77,7 +84,7 @@ def app(gargs):
         save_text(pred_res, gargs.predict_output_file)
 
 
-if __name__ == '__main__':
+def argparser(args=None):
     parser = argparse.ArgumentParser()
     # parse arguments
     parser.add_argument("--model_type", default='bert', type=str, required=True,
@@ -164,18 +171,23 @@ if __name__ == '__main__':
                         help="if use this mode, we will use BCEWithLogitsLoss or binary focal loss functions.")
     parser.add_argument('--balance_sample_weights', action='store_true',
                         help="Whether to create sample weights and pass it to loss functions")
+
+    if args is None:
+        parsed_args = parser.parse_args()
+    else:
+        parsed_args = parser.parse_args(args)
+        
+    return parsed_args
+
+if __name__ == '__main__':
     # using pytorch ddp
     # parser.add_argument('--ddp', action='store_true',
     #                     help="Whether to use Distributed Data Parallel")
     # parser.add_argument('--local_rank', default=-1, type=int,
     #                     help="local rank ID")
-
-    args = parser.parse_args()
+    args = argparser()
     # save the experiment arguments into a file under new model dir
     Path(args.new_model_dir).mkdir(exist_ok=True, parents=True)
-    save_json(vars(args), Path(args.new_model_dir) / "training_arguments.json")
+    # save_json(vars(args), Path(args.new_model_dir) / "training_arguments.json")
 
-    # other setup
-    args.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    args.logger = TransformerLogger(logger_file=args.log_file, logger_level=args.log_lvl).get_logger()
     app(args)

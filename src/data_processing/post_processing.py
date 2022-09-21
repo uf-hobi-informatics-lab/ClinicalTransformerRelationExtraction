@@ -11,8 +11,10 @@ We will not copy the original text to the results output dir
 # import logger from upper level dir
 import os
 import sys
+# TODO: This is so bad. Need a better way to add this path
+sys.path.insert(0,os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)))
 from pathlib import Path
-
+import shutil
 import argparse
 import numpy as np
 from utils import TransformerLogger
@@ -71,18 +73,15 @@ def output_results(mapped_predictions, entity_data_dir, output_dir):
 
     for fid in entity_data_dir.glob("*.ann"):
         fid_key = fid.stem
-        ofn = output_dir / "{}.ann".format(fid_key)
-        entities = load_text(fid).strip()
+        ofn = output_dir / "{}.ann".format(fid_key)        
         if fid_key in mapped_predictions:
+            entities = load_text(fid).strip()
             rels = mapped_predictions[fid_key]
             rels = "\n".join(rels)
             outputs = "\n".join([entities, rels])
             save_text(outputs, ofn)
         else:
-            # only save when file is not exist
-            # this is important for batch prediction dur to multi rounds visiting same files
-            if not ofn.is_file():
-                save_text(entities, ofn)
+            shutil.copy(fid, ofn)
 
 
 def combine_maps_predictions_mul(args):
@@ -178,8 +177,7 @@ def app(args):
         traceback.print_exc()
         args.logger.error(traceback.format_exc())
 
-
-if __name__ == '__main__':
+def argparser(args=None):
     parser = argparse.ArgumentParser()
     # parse arguments
     """
@@ -215,9 +213,16 @@ if __name__ == '__main__':
                         help="prediction results")
     parser.add_argument("--log_file", default="./log.txt", type=str,
                         help="where to save the log information")
-    pargs = parser.parse_args()
 
-    pargs.logger = TransformerLogger(logger_file=pargs.log_file,
-                                     logger_level='i').get_logger()
+    if args is None:
+        parsed_args = parser.parse_args()
+    else:
+        parsed_args = parser.parse_args(args)
+        
+    parsed_args.logger = TransformerLogger(logger_file=parsed_args.log_file, logger_level='i').get_logger()
 
+    return parsed_args
+
+if __name__ == '__main__':
+    pargs = argparser()
     app(pargs)
