@@ -1,5 +1,4 @@
 import sys, os
-sys.path.insert(0,'/home/jameshuang/repos/ClinicalTransformerRelationExtraction/src')
 sys.path.insert(0,os.path.dirname(__file__))
 import argparse
 import torch
