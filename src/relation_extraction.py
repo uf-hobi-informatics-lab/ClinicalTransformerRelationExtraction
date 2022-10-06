@@ -170,6 +170,8 @@ def argparser(args=None):
                         help="if use this mode, we will use BCEWithLogitsLoss or binary focal loss functions.")
     parser.add_argument('--balance_sample_weights', action='store_true',
                         help="Whether to create sample weights and pass it to loss functions")
+    parser.add_argument('--attach_result', action='store_true',
+                        help="attach the prediction result to the existing one")
 
     if args is None:
         parsed_args = parser.parse_args()
