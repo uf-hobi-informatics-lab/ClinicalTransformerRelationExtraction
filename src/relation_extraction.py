@@ -80,7 +80,7 @@ def app(gargs):
 
         # predict_output_file must be a file, we will create parent dir automatically
         Path(gargs.predict_output_file).parent.mkdir(parents=True, exist_ok=True)
-        save_text(pred_res, gargs.predict_output_file)
+        save_text(pred_res, gargs.predict_output_file, mode=("a" if gargs.attach_result else "w"))
 
 
 def argparser(args=None):
@@ -170,7 +170,7 @@ def argparser(args=None):
                         help="if use this mode, we will use BCEWithLogitsLoss or binary focal loss functions.")
     parser.add_argument('--balance_sample_weights', action='store_true',
                         help="Whether to create sample weights and pass it to loss functions")
-    parser.add_argument('--attach_result', action='store_true',
+    parser.add_argument('--attach_result', default=False, action='store_true',
                         help="attach the prediction result to the existing one")
 
     if args is None:

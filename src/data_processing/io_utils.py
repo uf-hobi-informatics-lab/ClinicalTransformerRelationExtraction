@@ -8,8 +8,8 @@ def load_text(ifn):
     return txt
 
 
-def save_text(text, ofn):
-    with open(ofn, "w") as f:
+def save_text(text, ofn, mode="w"):
+    with open(ofn, mode) as f:
         f.write(text)
 
 
