@@ -65,7 +65,7 @@ def map_results(res):
     return mapped_preds
 
 
-def output_results(mapped_predictions, entity_data_dir, output_dir):
+def output_results(mapped_predictions, entity_data_dir, output_dir, copy_ann=True):
     entity_data_dir = Path(entity_data_dir)
 
     output_dir = Path(output_dir)
@@ -80,7 +80,7 @@ def output_results(mapped_predictions, entity_data_dir, output_dir):
             rels = "\n".join(rels)
             outputs = "\n".join([entities, rels])
             save_text(outputs, ofn)
-        else:
+        elif copy_ann:
             shutil.copy(fid, ofn)
 
 
@@ -172,7 +172,7 @@ def app(args):
 
     try:
         combined_results = map_results(combined_results)
-        output_results(combined_results, args.entity_data_dir, args.brat_result_output_dir)
+        output_results(combined_results, args.entity_data_dir, args.brat_result_output_dir, copy_ann=args.copy_ann)
     except Exception as ex:
         traceback.print_exc()
         args.logger.error(traceback.format_exc())
@@ -213,6 +213,8 @@ def argparser(args=None):
                         help="prediction results")
     parser.add_argument("--log_file", default="./log.txt", type=str,
                         help="where to save the log information")
+    parser.add_argument("--copy_ann", default=True, type=bool,
+                        help="whether to copy orignial ann if no relation exists")
 
     if args is None:
         parsed_args = parser.parse_args()
