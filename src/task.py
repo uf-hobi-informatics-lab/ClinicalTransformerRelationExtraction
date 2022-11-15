@@ -4,11 +4,11 @@ This script is used for training and test
 
 
 # from data_utils import convert_examples_to_relation_extraction_features
-from data_utils import (features2tensors, relation_extraction_data_loader,
+from .data_utils import (features2tensors, relation_extraction_data_loader,
                         batch_to_model_input, RelationDataFormatSepProcessor,
                         RelationDataFormatUniProcessor)
-from utils import acc_and_f1
-from data_processing.io_utils import pkl_save, pkl_load, save_json
+from .utils import acc_and_f1
+from .data_processing.io_utils import pkl_save, pkl_load, save_json
 from transformers import glue_convert_examples_to_features as convert_examples_to_relation_extraction_features
 from transformers import get_linear_schedule_with_warmup, get_cosine_schedule_with_warmup
 import torch
@@ -16,7 +16,7 @@ from tqdm import trange, tqdm
 import numpy as np
 from packaging import version
 from pathlib import Path
-from config import SPEC_TAGS, MODEL_DICT, VERSION, NEW_ARGS, CONFIG_VERSION_NAME
+from .config import SPEC_TAGS, MODEL_DICT, VERSION, NEW_ARGS, CONFIG_VERSION_NAME
 import shutil
 
 
@@ -353,7 +353,7 @@ class TaskRunner(object):
         elif task == "dev":
             examples = self.data_processor.get_dev_examples()
         elif task == "test":
-            examples = self.data_processor.get_test_examples()
+            examples = self.data_processor.get_test_examples(tsv=self.tsv)
         else:
             raise RuntimeError("expect task to be train, dev or test but get {}".format(task))
 
@@ -378,10 +378,11 @@ class TaskRunner(object):
             examples = self._load_examples_by_task(task)
         return examples
 
-    def reset_dataloader(self, data_dir, has_file_header=None, max_len=None):
+    def reset_dataloader(self, data_dir, has_file_header=None, max_len=None, tsv=None):
         """
           allow reset data dir and data file header and max seq len
         """
+        self.tsv = tsv
         self.data_processor.set_data_dir(data_dir)
         if has_file_header:
             self.data_processor.set_header(has_file_header)

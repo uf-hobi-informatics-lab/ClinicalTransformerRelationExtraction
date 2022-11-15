@@ -1,7 +1,7 @@
 from transformers import (BertConfig, RobertaConfig, XLNetConfig, AlbertConfig, LongformerConfig,
                           BertTokenizer, RobertaTokenizer, XLNetTokenizer, AlbertTokenizer, LongformerTokenizer,
                           DebertaConfig, DebertaTokenizer, MegatronBertConfig)
-from models import (BertForRelationIdentification, RoBERTaForRelationIdentification,
+from .models import (BertForRelationIdentification, RoBERTaForRelationIdentification,
                     XLNetForRelationIdentification, AlbertForRelationIdentification,
                     LongFormerForRelationIdentification, DebertaForRelationIdentification,
                     MegatronForRelationIdentification)

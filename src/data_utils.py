@@ -1,5 +1,5 @@
 import traceback
-from config import MODEL_REQUIRE_SEGMENT_ID, SPEC_TAGS, TOKENIZER_USE_FOUR_SPECIAL_TOKs
+from .config import MODEL_REQUIRE_SEGMENT_ID, SPEC_TAGS, TOKENIZER_USE_FOUR_SPECIAL_TOKs
 import csv
 from pathlib import Path
 import torch
@@ -200,12 +200,12 @@ class DataProcessor(object):
         return self._create_examples(
             self._read_tsv(input_file_name), "dev")
 
-    def get_test_examples(self, filename=None):
+    def get_test_examples(self, filename=None, tsv=None):
         """See base class."""
         input_file_name = self.data_dir / filename if filename else self.data_dir / "test.tsv"
 
         return self._create_examples(
-            self._read_tsv(input_file_name), "test")
+            (self._read_tsv(input_file_name) if (tsv is None) else tsv), "test")
 
     def get_sample_distribution(self, train_file=None):
         # the distribution will be measured based on training data

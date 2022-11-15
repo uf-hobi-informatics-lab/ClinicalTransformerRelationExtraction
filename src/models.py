@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 from torch.nn import CrossEntropyLoss, BCEWithLogitsLoss
-from utils import TransformerLogger
+from .utils import TransformerLogger
 from transformers.modeling_utils import SequenceSummary
 from transformers import (BertForSequenceClassification, BertModel,
                           XLNetForSequenceClassification, XLNetModel,
@@ -11,7 +11,7 @@ from transformers import (BertForSequenceClassification, BertModel,
                           DebertaForSequenceClassification, DebertaModel,
                           MegatronBertForSequenceClassification, MegatronBertModel,
                           PreTrainedModel)
-from model_utils import StableDropout, FocalLoss, BCEFocalLoss
+from .model_utils import StableDropout, FocalLoss, BCEFocalLoss
 
 
 logger = TransformerLogger(logger_level='i').get_logger()
