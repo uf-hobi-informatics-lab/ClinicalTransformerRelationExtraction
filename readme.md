@@ -19,6 +19,7 @@ We only support train-dev mode, but you can do 5-fold CV.
 - ALBERT
 - DeBERTa
 - Longformer
+- GatorTron
 > We will keep adding new models.
 
 ## usage and example
