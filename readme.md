@@ -154,6 +154,12 @@ python src/data_processing/post_processing.py \
 ## Using GatorTron model from HuggingFace
 - Train
 ```shell script
+export CUDA_VISIBLE_DEVICES=1
+data_dir=./sample_data
+nmd=./new_modelzw
+pof=./predictions.txt
+log=./log.txt
+
   python ./src/relation_extraction.py \
 		--model_type gatortron \
 		--data_format_mode 0 \
@@ -181,6 +187,12 @@ python src/data_processing/post_processing.py \
 ```
 - Predict
 ```shell script
+export CUDA_VISIBLE_DEVICES=1
+data_dir=./sample_data
+nmd=./new_modelzw
+pof=./predictions.txt
+log=./log.txt
+
 python ./src/relation_extraction.py \
 		--model_type gatortron \
 		--data_format_mode 0 \
