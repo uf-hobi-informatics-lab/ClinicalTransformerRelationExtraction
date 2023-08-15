@@ -153,7 +153,7 @@ python src/data_processing/post_processing.py \
 
 ## Using GatorTron model from HuggingFace
 - Train
-  ```shell script
+```shell script
   python ./src/relation_extraction.py \
 		--model_type gatortron \
 		--data_format_mode 0 \
@@ -179,7 +179,6 @@ python src/data_processing/post_processing.py \
 		--max_num_checkpoints 1 \
 		--log_file $log \
 ```
-
 - Predict
 ```shell script
 python ./src/relation_extraction.py \
