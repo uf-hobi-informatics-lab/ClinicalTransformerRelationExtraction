@@ -352,3 +352,34 @@ class MegatronForRelationIdentification(MegatronBertForSequenceClassification, B
         logits = self.output2logits(pooled_output, seq_output, input_ids)
 
         return self.calc_loss(logits, outputs, labels)
+    
+class GatortronForRelationIdentification(MegatronBertForSequenceClassification, BaseModel):
+    def __init__(self, config):
+        super().__init__(config)
+        self.bert = MegatronBertModel(config)
+        self.init_weights()
+
+    def forward(self,
+                input_ids=None,
+                attention_mask=None,
+                token_type_ids=None,
+                position_ids=None,
+                head_mask=None,
+                inputs_embeds=None,
+                labels=None,
+                output_attentions=None,
+                **kwargs):
+
+        outputs = self.bert(
+            input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            head_mask=head_mask
+        )
+
+        pooled_output = outputs[1]
+        seq_output = outputs[0]
+        logits = self.output2logits(pooled_output, seq_output, input_ids)
+        print(logits, outputs, labels)
+        return self.calc_loss(logits, outputs, labels)
